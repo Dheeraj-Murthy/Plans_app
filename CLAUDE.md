@@ -49,9 +49,13 @@ fonts/                                   — Inter TTF (4 weights) bundled as as
 
 **State flow**: `sidebarSelectionProvider` (sidebar selection) + `tasksProvider` (all tasks) → `filteredTasksProvider` (derived, drives task list).
 
-**`SidebarSelection`** is a sealed class: `ViewSelection(ViewType)` or `ProjectSelection(projectId)`. Pattern-match it everywhere, not string comparisons.
+**`SidebarSelection`** is a sealed class: `ViewSelection(ViewType)` or `ProjectSelection(projectId)`. Pattern-match it everywhere, not string comparisons. `ViewType` values: `inbox`, `today`, `completed`.
 
-**`DatabaseService`** is instantiated once in `main()` and injected via `databaseServiceProvider.overrideWithValue(db)`. Never call `ref.read(databaseServiceProvider)` in providers that run before the override is set.
+**`DatabaseService`** is instantiated once in `main()` and injected via `databaseServiceProvider.overrideWithValue(db)`. Never call `ref.read(databaseServiceProvider)` in providers that run before the override is set. For tests, use `DatabaseService(testPath: ':memory:')`.
+
+**Default projects** are seeded on DB creation with hardcoded IDs: `'default'` (Inbox), `'work'`, `'personal'`, `'ideas'`. `Task.projectId` defaults to `'default'`.
+
+**DB column encoding**: dates as `millisecondsSinceEpoch` (INTEGER), `is_completed` as 0/1 (INTEGER), `priority` as `TaskPriority.index` (0–3).
 
 ## Key Constraints
 

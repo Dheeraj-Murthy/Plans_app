@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/task.dart';
 import '../providers/task_provider.dart';
@@ -10,11 +11,56 @@ import '../../../theme/app_theme.dart';
 import '../../../theme/app_typography.dart';
 import '../../../shared/widgets/sidebar/sticky_composer.dart';
 
-class TaskListScreen extends ConsumerWidget {
+class TaskListScreen extends ConsumerStatefulWidget {
   const TaskListScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<TaskListScreen> createState() => _TaskListScreenState();
+}
+
+class _TaskListScreenState extends ConsumerState<TaskListScreen> {
+  @override
+  void initState() {
+    super.initState();
+    HardwareKeyboard.instance.addHandler(_handleKeyEvent);
+  }
+
+  @override
+  void dispose() {
+    HardwareKeyboard.instance.removeHandler(_handleKeyEvent);
+    super.dispose();
+  }
+
+  bool _handleKeyEvent(KeyEvent event) {
+    if (event is! KeyDownEvent) return false;
+    final isCmd = HardwareKeyboard.instance.isMetaPressed;
+    if (!isCmd) return false;
+
+    switch (event.logicalKey) {
+      case LogicalKeyboardKey.keyN:
+        ref.read(composerFocusRequestProvider.notifier).state++;
+        return true;
+      case LogicalKeyboardKey.keyK:
+        ref.read(searchFocusRequestProvider.notifier).state++;
+        return true;
+      case LogicalKeyboardKey.digit1:
+        ref.read(sidebarSelectionProvider.notifier).state =
+            const ViewSelection(ViewType.inbox);
+        return true;
+      case LogicalKeyboardKey.digit2:
+        ref.read(sidebarSelectionProvider.notifier).state =
+            const ViewSelection(ViewType.today);
+        return true;
+      case LogicalKeyboardKey.digit3:
+        ref.read(sidebarSelectionProvider.notifier).state =
+            const ViewSelection(ViewType.completed);
+        return true;
+    }
+    return false;
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final selection = ref.watch(sidebarSelectionProvider);
     final projects = ref.watch(projectsProvider);
     final filtered = ref.watch(filteredTasksProvider);
@@ -47,7 +93,7 @@ class TaskListScreen extends ConsumerWidget {
           Expanded(
             child: Column(
               children: [
-                _buildHeader(title, completed, ref),
+                _buildHeader(title, completed),
                 Expanded(
                   child: filtered.isEmpty
                       ? Center(
@@ -92,7 +138,7 @@ class TaskListScreen extends ConsumerWidget {
 
                                 return Column(
                                   children: [
-                                    if (isFirstCompleted && completed.isNotEmpty)
+                                    if (isFirstCompleted && completed.isNotEmpty && incomplete.isNotEmpty)
                                       _SectionDivider(count: completed.length),
                                     TaskTile(task: task),
                                   ],
@@ -111,7 +157,7 @@ class TaskListScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildHeader(String title, List<Task> completed, WidgetRef ref) {
+  Widget _buildHeader(String title, List<Task> completed) {
     return Container(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.xl,

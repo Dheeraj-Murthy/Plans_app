@@ -6,12 +6,14 @@ class AppCheckbox extends StatefulWidget {
   final bool value;
   final ValueChanged<bool> onChanged;
   final double size;
+  final Color? color;
 
   const AppCheckbox({
     super.key,
     required this.value,
     required this.onChanged,
     this.size = 18,
+    this.color,
   });
 
   @override
@@ -61,6 +63,8 @@ class _AppCheckboxState extends State<AppCheckbox>
     widget.onChanged(!widget.value);
   }
 
+  Color get _activeColor => widget.color ?? AppColors.accent;
+
   @override
   Widget build(BuildContext context) {
     final s = widget.size;
@@ -73,9 +77,9 @@ class _AppCheckboxState extends State<AppCheckbox>
         height: s,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: widget.value ? AppColors.accent : Colors.transparent,
+          color: widget.value ? _activeColor : Colors.transparent,
           border: Border.all(
-            color: widget.value ? AppColors.accent : AppColors.textMuted,
+            color: _activeColor.withValues(alpha: widget.value ? 1 : 0.4),
             width: 2,
           ),
         ),

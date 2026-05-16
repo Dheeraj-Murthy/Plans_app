@@ -10,10 +10,15 @@ final tasksProvider =
   return TasksNotifier(db);
 });
 
+final searchQueryProvider = StateProvider<String>((ref) => '');
+final composerFocusRequestProvider = StateProvider<int>((ref) => 0);
+final searchFocusRequestProvider = StateProvider<int>((ref) => 0);
+
 final todayCountProvider = Provider<int>((ref) {
   final tasks = ref.watch(tasksProvider);
   final now = DateTime.now();
   return tasks.where((t) {
+    if (t.isCompleted) return false;
     final due = t.dueDate;
     if (due == null) return false;
     return due.year == now.year &&
@@ -26,11 +31,19 @@ final completedCountProvider = Provider<int>((ref) {
   return ref.watch(tasksProvider).where((t) => t.isCompleted).length;
 });
 
+final projectTaskCountProvider = Provider.family<int, String>((ref, projectId) {
+  return ref
+      .watch(tasksProvider)
+      .where((t) => t.projectId == projectId && !t.isCompleted)
+      .length;
+});
+
 final filteredTasksProvider = Provider<List<Task>>((ref) {
   final tasks = ref.watch(tasksProvider);
   final selection = ref.watch(sidebarSelectionProvider);
+  final query = ref.watch(searchQueryProvider).toLowerCase().trim();
 
-  return switch (selection) {
+  var filtered = switch (selection) {
     ViewSelection(:final view) => switch (view) {
         ViewType.inbox => tasks,
         ViewType.today => tasks.where((t) {
@@ -47,6 +60,15 @@ final filteredTasksProvider = Provider<List<Task>>((ref) {
     ProjectSelection(:final projectId) =>
       tasks.where((t) => t.projectId == projectId).toList(),
   };
+
+  if (query.isNotEmpty) {
+    filtered = filtered.where((t) {
+      return t.title.toLowerCase().contains(query) ||
+          (t.description?.toLowerCase().contains(query) ?? false);
+    }).toList();
+  }
+
+  return filtered;
 });
 
 class TasksNotifier extends StateNotifier<List<Task>> {
@@ -57,7 +79,7 @@ class TasksNotifier extends StateNotifier<List<Task>> {
 
   void _load() {
     _db.getTasks().then((rows) {
-      if (rows.isEmpty) {
+      if (rows.isEmpty && _db.isNewDatabase) {
         _seedSampleData();
       } else {
         state = rows.map((r) => Task.fromMap(r)).toList();
@@ -144,12 +166,9 @@ class TasksNotifier extends StateNotifier<List<Task>> {
     final completed = state.where((t) => t.isCompleted).toList();
     if (completed.isEmpty) return;
     state = state.where((t) => !t.isCompleted).toList();
-    final db = await _db.database;
-    final batch = db.batch();
     for (final t in completed) {
-      batch.delete('tasks', where: 'id = ?', whereArgs: [t.id]);
+      await _db.deleteTask(t.id);
     }
-    await batch.commit(noResult: true);
   }
 
   void updateTask(String id, Task updated) {

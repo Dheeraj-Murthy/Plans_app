@@ -1,5 +1,7 @@
 enum TaskPriority { none, low, medium, high }
 
+const _absent = Object();
+
 class Task {
   final String id;
   final String title;
@@ -27,8 +29,8 @@ class Task {
   Task copyWith({
     String? id,
     String? title,
-    String? description,
-    DateTime? dueDate,
+    Object? description = _absent,
+    Object? dueDate = _absent,
     TaskPriority? priority,
     bool? isCompleted,
     String? projectId,
@@ -38,8 +40,8 @@ class Task {
     return Task(
       id: id ?? this.id,
       title: title ?? this.title,
-      description: description ?? this.description,
-      dueDate: dueDate ?? this.dueDate,
+      description: description == _absent ? this.description : description as String?,
+      dueDate: dueDate == _absent ? this.dueDate : dueDate as DateTime?,
       priority: priority ?? this.priority,
       isCompleted: isCompleted ?? this.isCompleted,
       projectId: projectId ?? this.projectId,
