@@ -1,0 +1,195 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../models/task.dart';
+import '../providers/task_provider.dart';
+import '../widgets/task_tile.dart';
+import '../../projects/widgets/slim_sidebar.dart';
+import '../../projects/providers/project_provider.dart';
+import '../../../theme/app_spacing.dart';
+import '../../../theme/app_theme.dart';
+import '../../../theme/app_typography.dart';
+import '../../../shared/widgets/sidebar/sticky_composer.dart';
+
+class TaskListScreen extends ConsumerWidget {
+  const TaskListScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final selection = ref.watch(sidebarSelectionProvider);
+    final projects = ref.watch(projectsProvider);
+    final filtered = ref.watch(filteredTasksProvider);
+
+    final title = switch (selection) {
+      ViewSelection(:final view) => switch (view) {
+          ViewType.inbox => 'Inbox',
+          ViewType.today => 'Today',
+          ViewType.completed => 'Completed',
+        },
+      ProjectSelection(:final projectId) =>
+        projects.where((p) => p.id == projectId).firstOrNull?.name ?? 'Tasks',
+    };
+
+    final incomplete = <Task>[];
+    final completed = <Task>[];
+    for (final t in filtered) {
+      if (t.isCompleted) {
+        completed.add(t);
+      } else {
+        incomplete.add(t);
+      }
+    }
+
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: Row(
+        children: [
+          const SlimSidebar(),
+          Expanded(
+            child: Column(
+              children: [
+                _buildHeader(title, completed, ref),
+                Expanded(
+                  child: filtered.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.check_circle_outline_rounded,
+                                size: 48,
+                                color: AppColors.textMuted.withValues(alpha: 0.3),
+                              ),
+                              const SizedBox(height: AppSpacing.md),
+                              Text(
+                                'No tasks yet',
+                                style: AppTypography.bodyMedium.copyWith(
+                                  color: AppColors.textMuted,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : Center(
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(
+                              maxWidth: AppSpacing.maxContentWidth,
+                            ),
+                            child: ListView.builder(
+                              padding: const EdgeInsets.only(top: 8),
+                              itemCount: incomplete.length + completed.length,
+                              itemBuilder: (context, index) {
+                                final task = index < incomplete.length
+                                    ? incomplete[index]
+                                    : completed[index - incomplete.length];
+
+                                final isFirstCompleted =
+                                    task.isCompleted &&
+                                    (index == 0 ||
+                                        !(index - 1 < incomplete.length
+                                            ? incomplete[index - 1]
+                                            : completed[index - 1 - incomplete.length])
+                                            .isCompleted);
+
+                                return Column(
+                                  children: [
+                                    if (isFirstCompleted && completed.isNotEmpty)
+                                      _SectionDivider(count: completed.length),
+                                    TaskTile(task: task),
+                                  ],
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                ),
+                const StickyComposer(),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader(String title, List<Task> completed, WidgetRef ref) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.xl,
+        AppSpacing.sm,
+        AppSpacing.xl,
+        0,
+      ),
+      decoration: const BoxDecoration(
+        border: Border(
+          bottom: BorderSide(color: AppColors.border, width: 0.5),
+        ),
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  title,
+                  style: AppTypography.headingMedium.copyWith(
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ),
+              if (completed.isNotEmpty)
+                GestureDetector(
+                  onTap: () {
+                    ref.read(tasksProvider.notifier).clearCompleted();
+                  },
+                  child: Text(
+                    'Clear completed',
+                    style: AppTypography.bodySmall.copyWith(
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SectionDivider extends StatelessWidget {
+  final int count;
+
+  const _SectionDivider({required this.count});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.xl,
+        AppSpacing.lg,
+        AppSpacing.sm,
+      ),
+      child: Row(
+        children: [
+          Text(
+            'Completed — $count',
+            style: AppTypography.caption.copyWith(
+              color: AppColors.textMuted,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          const Expanded(
+            child: Divider(
+              color: AppColors.border,
+              thickness: 0.5,
+              height: 1,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
