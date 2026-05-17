@@ -1,17 +1,39 @@
 # plans_app
 
-A new Flutter project.
+Todoist/Linear-style Flutter task manager for macOS. Dark theme, offline-first, Rust backend via `flutter_rust_bridge`.
 
 ## Getting Started
 
-This project is a starting point for a Flutter application.
+```bash
+cd plans_app
+./run_macos.sh
+```
 
-A few resources to get you started if this is your first Flutter project:
+Builds Rust (`plans_core` framework) then runs `flutter run -d macos`.
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+## Key Features
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+- Dark theme (bg #151618, accent #7C6DF2)
+- Inter font bundled locally (no google_fonts)
+- 240px sidebar with smart lists (Inbox/Today/Completed) + projects
+- Inline task composer with priority, due date, project selection
+- Animated checkboxes with priority-colored borders
+- Rust backend: `rusqlite` SQLite, `serde` serialization, `uuid` IDs
+
+## Architecture
+
+```
+plans_app/
+  lib/          — Flutter UI (Riverpod state, feature-based layout)
+  rust/         — Rust crate (plans_core): api/, db.rs, models.rs
+  macos/        — Xcode project with "Copy Rust Framework" build phase
+src/
+  rust/         — Auto-generated flutter_rust_bridge Dart bindings
+```
+
+All mutations hit local SQLite via Rust FFI — no network calls yet.
+
+## Planned
+
+- Phase 4: Sync engine (CRDT)
+- Phase 5: Axum/PostgreSQL server

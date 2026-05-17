@@ -240,6 +240,7 @@
 				33CC10EB2044A3C60003C045 /* Resources */,
 				33CC110E2044A8840003C045 /* Bundle Framework */,
 				3399D490228B24CF009A79C7 /* ShellScript */,
+				84D1B9E2F0A6C7B8D4E3F5A8 /* Copy Rust Framework */,
 			);
 			buildRules = (
 			);
@@ -403,6 +404,24 @@
 			shellPath = /bin/sh;
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 			showEnvVarsInLog = 0;
+		};
+		84D1B9E2F0A6C7B8D4E3F5A8 /* Copy Rust Framework */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Copy Rust Framework";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "set -euo pipefail\nRUST_DIR=\"$PROJECT_DIR/../rust\"\nFRAMEWORK_SRC=\"$RUST_DIR/target/release/plans_core.framework\"\nFRAMEWORK_DST=\"$TARGET_BUILD_DIR/$FRAMEWORKS_FOLDER_PATH\"\n\nif [ ! -d \"$FRAMEWORK_SRC\" ]; then\n    echo \"Building Rust framework...\"\n    cd \"$RUST_DIR\"\n    /bin/bash build_macos.sh\nfi\n\nmkdir -p \"$FRAMEWORK_DST\"\ncp -Rf \"$FRAMEWORK_SRC\" \"$FRAMEWORK_DST\"\necho \"Copied plans_core.framework to $FRAMEWORK_DST\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 

@@ -9,14 +9,6 @@ class Project {
     this.colorIndex = 0,
   });
 
-  factory Project.fromMap(Map<String, dynamic> map) {
-    return Project(
-      id: map['id'] as String,
-      name: map['name'] as String,
-      colorIndex: map['color_index'] as int,
-    );
-  }
-
   Project copyWith({
     String? id,
     String? name,

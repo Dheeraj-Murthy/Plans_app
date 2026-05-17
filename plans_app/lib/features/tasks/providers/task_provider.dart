@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:uuid/uuid.dart';
 import '../models/task.dart';
 import '../../projects/providers/project_provider.dart';
 import '../../../shared/database/database_service.dart';
@@ -31,11 +30,19 @@ final completedCountProvider = Provider<int>((ref) {
   return ref.watch(tasksProvider).where((t) => t.isCompleted).length;
 });
 
+final projectTaskCountsProvider = Provider<Map<String, int>>((ref) {
+  final tasks = ref.watch(tasksProvider);
+  final counts = <String, int>{};
+  for (final t in tasks) {
+    if (!t.isCompleted) {
+      counts[t.projectId] = (counts[t.projectId] ?? 0) + 1;
+    }
+  }
+  return counts;
+});
+
 final projectTaskCountProvider = Provider.family<int, String>((ref, projectId) {
-  return ref
-      .watch(tasksProvider)
-      .where((t) => t.projectId == projectId && !t.isCompleted)
-      .length;
+  return ref.watch(projectTaskCountsProvider)[projectId] ?? 0;
 });
 
 final filteredTasksProvider = Provider<List<Task>>((ref) {
@@ -78,74 +85,26 @@ class TasksNotifier extends StateNotifier<List<Task>> {
   }
 
   void _load() {
-    _db.getTasks().then((rows) {
-      if (rows.isEmpty && _db.isNewDatabase) {
-        _seedSampleData();
-      } else {
-        state = rows.map((r) => Task.fromMap(r)).toList();
-      }
+    _db.getTasks().then((tasks) {
+      state = tasks;
     });
   }
 
-  Future<void> _seedSampleData() async {
-    final uuid = const Uuid();
-    final tasks = [
-      Task(
-        id: uuid.v4(),
-        title: 'Set up Flutter project structure',
-        description: 'Create features/, shared/, routing/, theme/ folders',
-        priority: TaskPriority.high,
-        projectId: 'work',
-      ),
-      Task(
-        id: uuid.v4(),
-        title: 'Build task list UI',
-        priority: TaskPriority.medium,
-        projectId: 'work',
-      ),
-      Task(
-        id: uuid.v4(),
-        title: 'Buy groceries',
-        dueDate: DateTime.now().add(const Duration(days: 1)),
-        priority: TaskPriority.medium,
-        projectId: 'personal',
-      ),
-      Task(
-        id: uuid.v4(),
-        title: 'Read about Riverpod',
-        projectId: 'personal',
-      ),
-      Task(
-        id: uuid.v4(),
-        title: 'Write sync engine design',
-        description: 'Think through conflict resolution strategy',
-        priority: TaskPriority.low,
-        projectId: 'ideas',
-      ),
-    ];
-    state = tasks;
-    for (final t in tasks) {
-      await _db.insertTask(t);
-    }
-  }
-
-  void addTask({
+  Future<void> addTask({
     required String title,
     String? description,
     DateTime? dueDate,
     TaskPriority priority = TaskPriority.none,
     String projectId = 'default',
-  }) {
-    final task = Task(
-      id: const Uuid().v4(),
+  }) async {
+    final task = await _db.insertTask(
       title: title,
       description: description,
       dueDate: dueDate,
-      priority: priority,
+      priority: priority.index,
       projectId: projectId,
     );
     state = [...state, task];
-    _db.insertTask(task);
   }
 
   void toggleTask(String id) {
@@ -166,9 +125,7 @@ class TasksNotifier extends StateNotifier<List<Task>> {
     final completed = state.where((t) => t.isCompleted).toList();
     if (completed.isEmpty) return;
     state = state.where((t) => !t.isCompleted).toList();
-    for (final t in completed) {
-      await _db.deleteTask(t.id);
-    }
+    await _db.clearCompleted();
   }
 
   void updateTask(String id, Task updated) {

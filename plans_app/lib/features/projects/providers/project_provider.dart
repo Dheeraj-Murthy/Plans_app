@@ -1,5 +1,5 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:uuid/uuid.dart';
 import '../models/project.dart';
 import '../../../shared/database/database_service.dart';
 
@@ -35,18 +35,15 @@ class ProjectsNotifier extends StateNotifier<List<Project>> {
   }
 
   void _load() {
-    _db.getProjects().then((rows) {
-      state = rows.map((r) => Project.fromMap(r)).toList();
+    _db.getProjects().then((projects) {
+      state = projects;
+    }).catchError((e) {
+      debugPrint('ProjectsNotifier._load failed: $e');
     });
   }
 
   Future<void> addProject(String name, {required int colorIndex}) async {
-    final project = Project(
-      id: const Uuid().v4(),
-      name: name,
-      colorIndex: colorIndex,
-    );
-    await _db.insertProject(project);
+    final project = await _db.insertProject(name: name, colorIndex: colorIndex);
     state = [...state, project];
   }
 

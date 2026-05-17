@@ -8,6 +8,7 @@ import '../../../theme/app_spacing.dart';
 import '../../../theme/app_theme.dart';
 import '../../../theme/app_typography.dart';
 import '../../../shared/widgets/app_checkbox.dart';
+import '../../../shared/widgets/hover_action_icon.dart';
 import '../../../shared/widgets/priority_dot.dart';
 
 class TaskTile extends ConsumerStatefulWidget {
@@ -280,19 +281,19 @@ class _TaskTileState extends ConsumerState<TaskTile> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            _HoverActionIcon(
+                            HoverActionIcon(
                               icon: Icons.flag_outlined,
                               onTap: _cyclePriority,
                             ),
                             const SizedBox(width: 2),
-                            _HoverActionIcon(
+                            HoverActionIcon(
                               icon: Icons.delete_outline_rounded,
                               onTap: () => ref
                                   .read(tasksProvider.notifier)
                                   .deleteTask(task.id),
                             ),
                             const SizedBox(width: 2),
-                            _HoverActionIcon(
+                            HoverActionIcon(
                               icon: Icons.more_horiz_rounded,
                               onTap: _openEditSheet,
                             ),
@@ -344,46 +345,6 @@ class _StrikethroughText extends StatelessWidget {
           ],
         );
       },
-    );
-  }
-}
-
-class _HoverActionIcon extends StatefulWidget {
-  final IconData icon;
-  final VoidCallback? onTap;
-
-  const _HoverActionIcon({required this.icon, this.onTap});
-
-  @override
-  State<_HoverActionIcon> createState() => _HoverActionIconState();
-}
-
-class _HoverActionIconState extends State<_HoverActionIcon> {
-  bool _isHovered = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return MouseRegion(
-      onEnter: (_) => setState(() => _isHovered = true),
-      onExit: (_) => setState(() => _isHovered = false),
-      child: GestureDetector(
-        onTap: widget.onTap,
-        child: AnimatedContainer(
-          duration: AppAnimations.fast,
-          curve: AppAnimations.easeOut,
-          width: 28,
-          height: 28,
-          decoration: BoxDecoration(
-            color: _isHovered ? AppColors.elevated : Colors.transparent,
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: Icon(
-            widget.icon,
-            size: 15,
-            color: _isHovered ? AppColors.textSecondary : AppColors.textMuted,
-          ),
-        ),
-      ),
     );
   }
 }

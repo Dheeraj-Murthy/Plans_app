@@ -50,19 +50,5 @@ class Task {
     );
   }
 
-  factory Task.fromMap(Map<String, dynamic> map) {
-    return Task(
-      id: map['id'] as String,
-      title: map['title'] as String,
-      description: map['description'] as String?,
-      dueDate: map['due_date'] != null
-          ? DateTime.fromMillisecondsSinceEpoch(map['due_date'] as int)
-          : null,
-      priority: TaskPriority.values[map['priority'] as int],
-      isCompleted: (map['is_completed'] as int) == 1,
-      projectId: map['project_id'] as String,
-      createdAt: DateTime.fromMillisecondsSinceEpoch(map['created_at'] as int),
-      updatedAt: DateTime.fromMillisecondsSinceEpoch(map['updated_at'] as int),
-    );
-  }
+
 }

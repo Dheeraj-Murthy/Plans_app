@@ -8,6 +8,7 @@ import '../../../theme/app_spacing.dart';
 import '../../../theme/app_theme.dart';
 import '../../../theme/app_typography.dart';
 import '../../../shared/widgets/app_chip.dart';
+import '../../../shared/helpers/task_helpers.dart';
 
 class AddTaskSheet extends ConsumerStatefulWidget {
   final Task? existingTask;
@@ -235,143 +236,24 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
   );
   }
 
-  void _showPriorityMenu() {
-    final box = _priorityKey.currentContext?.findRenderObject() as RenderBox?;
-    if (box == null) return;
-    final offset = box.localToGlobal(Offset.zero);
-    final size = box.size;
-    showMenu<TaskPriority>(
-      context: context,
-      position: RelativeRect.fromLTRB(
-        offset.dx , offset.dy,
-        offset.dx + size.width, offset.dy,
-      ),
-      items: [
-        for (final p in TaskPriority.values)
-          PopupMenuItem(
-            value: p,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  p == TaskPriority.none
-                      ? Icons.flag_outlined
-                      : Icons.flag_rounded,
-                  size: 16,
-                  color: switch (p) {
-                    TaskPriority.high => AppColors.priorityHigh,
-                    TaskPriority.medium => AppColors.priorityMedium,
-                    TaskPriority.low => AppColors.priorityLow,
-                    TaskPriority.none => AppColors.textMuted,
-                  },
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  p == TaskPriority.none ? 'None' : p.name,
-                  style: AppTypography.bodySmall,
-                ),
-              ],
-            ),
-          ),
-      ],
-    ).then((picked) {
-      if (picked != null) setState(() => _priority = picked);
-    });
+  void _showPriorityMenu() async {
+    final picked = await showPriorityMenu(context, _priorityKey);
+    if (picked != null) setState(() => _priority = picked);
   }
 
-  void _showProjectMenu() {
-    final box = _projectKey.currentContext?.findRenderObject() as RenderBox?;
-    if (box == null) return;
+  void _showProjectMenu() async {
     final projects = ref.read(projectsProvider);
     if (projects.isEmpty) return;
-    final offset = box.localToGlobal(Offset.zero);
-    final size = box.size;
-    showMenu<String>(
-      context: context,
-      position: RelativeRect.fromLTRB(
-        offset.dx, offset.dy,
-        offset.dx + size.width, offset.dy,
-      ),
-      items: [
-        for (int i = 0; i < projects.length; i++)
-          PopupMenuItem(
-            value: projects[i].id,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  _projectIcon(projects[i].name),
-                  size: 16,
-                  color: AppColors.projectColors[
-                      projects[i].colorIndex % AppColors.projectColors.length],
-                ),
-                const SizedBox(width: 8),
-                Text(projects[i].name, style: AppTypography.bodySmall),
-              ],
-            ),
-          ),
-      ],
-    ).then((picked) {
-      if (picked != null) {
-        final idx = projects.indexWhere((p) => p.id == picked);
-        if (idx >= 0) setState(() => _localProjectIndex = idx);
-      }
-    });
-  }
-
-  IconData _projectIcon(String name) {
-    return switch (name.toLowerCase()) {
-      'work' => Icons.work_outline_rounded,
-      'personal' => Icons.person_outline_rounded,
-      'ideas' => Icons.lightbulb_outline_rounded,
-      'inbox' => Icons.inbox_rounded,
-      _ => Icons.folder_outlined,
-    };
+    final picked = await showProjectMenu(context, _projectKey, ref);
+    if (picked != null) {
+      final idx = projects.indexWhere((p) => p.id == picked);
+      if (idx >= 0) setState(() => _localProjectIndex = idx);
+    }
   }
 
   Future<void> _pickDate() async {
-    final date = await showDatePicker(
-      context: context,
-      initialDate: _dueDate ?? DateTime.now(),
-      firstDate: DateTime.now().subtract(const Duration(days: 7)),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            datePickerTheme: DatePickerThemeData(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              todayBorder: const BorderSide(color: AppColors.accent, width: 1),
-              todayForegroundColor:
-                  WidgetStateProperty.all(AppColors.accent),
-              dayBackgroundColor: WidgetStateProperty.resolveWith((states) {
-                if (states.contains(WidgetState.selected)) return AppColors.accent;
-                return null;
-              }),
-              dayForegroundColor: WidgetStateProperty.resolveWith((states) {
-                if (states.contains(WidgetState.selected)) return Colors.white;
-                return null;
-              }),
-              dayShape: WidgetStateProperty.all(
-                RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(6),
-                ),
-              ),
-              headerHelpStyle: const TextStyle(fontSize: 11),
-              headerHeadlineStyle: const TextStyle(fontSize: 22),
-            ),
-          ),
-          child: MediaQuery(
-            data: MediaQuery.of(context).copyWith(textScaler: const TextScaler.linear(0.82)),
-            child: child!,
-          ),
-        );
-      },
-    );
-    if (date != null) {
-      setState(() => _dueDate = date);
-    }
+    final date = await pickDate(context, _dueDate);
+    if (date != null) setState(() => _dueDate = date);
   }
 
   void _submit() {

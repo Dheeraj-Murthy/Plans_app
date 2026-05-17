@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../theme/app_animations.dart';
 import '../../../theme/app_theme.dart';
@@ -8,6 +9,7 @@ import '../../../features/tasks/models/task.dart';
 import '../../../features/tasks/providers/task_provider.dart';
 import '../../../features/projects/providers/project_provider.dart';
 import '../app_chip.dart';
+import '../../helpers/task_helpers.dart';
 
 class StickyComposer extends ConsumerStatefulWidget {
   const StickyComposer({super.key});
@@ -19,7 +21,7 @@ class StickyComposer extends ConsumerStatefulWidget {
 class _StickyComposerState extends ConsumerState<StickyComposer> {
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
-  final _focusNode = FocusNode();
+  late final FocusNode _focusNode;
   final _priorityKey = GlobalKey();
   final _projectKey = GlobalKey();
 
@@ -35,6 +37,16 @@ class _StickyComposerState extends ConsumerState<StickyComposer> {
   void initState() {
     super.initState();
     _titleController.addListener(_onTextChanged);
+    _focusNode = FocusNode(
+      onKeyEvent: (node, event) {
+        if (event is KeyDownEvent &&
+            event.logicalKey == LogicalKeyboardKey.escape) {
+          _collapse();
+          return KeyEventResult.handled;
+        }
+        return KeyEventResult.ignored;
+      },
+    );
     _focusNode.addListener(_onFocusChanged);
   }
 
@@ -105,147 +117,35 @@ class _StickyComposerState extends ConsumerState<StickyComposer> {
     _focusNode.unfocus();
   }
 
-  void _showPriorityMenu() {
-    final box = _priorityKey.currentContext?.findRenderObject() as RenderBox?;
-    if (box == null) return;
-    final offset = box.localToGlobal(Offset.zero);
-    final size = box.size;
-    showMenu<TaskPriority>(
-      context: context,
-      position: RelativeRect.fromLTRB(
-        offset.dx, offset.dy,
-        offset.dx + size.width, offset.dy,
-      ),
-      items: [
-        for (final p in TaskPriority.values)
-          PopupMenuItem(
-            value: p,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  p == TaskPriority.none
-                      ? Icons.flag_outlined
-                      : Icons.flag_rounded,
-                  size: 16,
-                  color: switch (p) {
-                    TaskPriority.high => AppColors.priorityHigh,
-                    TaskPriority.medium => AppColors.priorityMedium,
-                    TaskPriority.low => AppColors.priorityLow,
-                    TaskPriority.none => AppColors.textMuted,
-                  },
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  p == TaskPriority.none ? 'None' : p.name,
-                  style: AppTypography.bodySmall,
-                ),
-              ],
-            ),
-          ),
-      ],
-    ).then((picked) {
-      if (picked != null) {
-        setState(() => _priority = picked);
-      }
+  void _collapse() {
+    _titleController.clear();
+    _descriptionController.clear();
+    setState(() {
+      _priority = TaskPriority.none;
+      _dueDate = null;
+      _isExpanded = false;
     });
+    _focusNode.unfocus();
   }
 
-  void _showProjectMenu() {
-    final box = _projectKey.currentContext?.findRenderObject() as RenderBox?;
-    if (box == null) return;
+  void _showPriorityMenu() async {
+    final picked = await showPriorityMenu(context, _priorityKey);
+    if (picked != null) setState(() => _priority = picked);
+  }
+
+  void _showProjectMenu() async {
     final projects = ref.read(projectsProvider);
     if (projects.isEmpty) return;
-    final offset = box.localToGlobal(Offset.zero);
-    final size = box.size;
-    showMenu<String>(
-      context: context,
-      position: RelativeRect.fromLTRB(
-        offset.dx, offset.dy,
-        offset.dx + size.width, offset.dy,
-      ),
-      items: [
-        for (int i = 0; i < projects.length; i++)
-          PopupMenuItem(
-            value: projects[i].id,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  _projectIcon(projects[i].name),
-                  size: 16,
-                  color: AppColors.projectColors[
-                      projects[i].colorIndex % AppColors.projectColors.length],
-                ),
-                const SizedBox(width: 8),
-                Text(projects[i].name, style: AppTypography.bodySmall),
-              ],
-            ),
-          ),
-      ],
-    ).then((picked) {
-      if (picked != null) {
-        final idx = projects.indexWhere((p) => p.id == picked);
-        if (idx >= 0) {
-          setState(() => _localProjectIndex = idx);
-        }
-      }
-    });
-  }
-
-  IconData _projectIcon(String name) {
-    return switch (name.toLowerCase()) {
-      'work' => Icons.work_outline_rounded,
-      'personal' => Icons.person_outline_rounded,
-      'ideas' => Icons.lightbulb_outline_rounded,
-      'inbox' => Icons.inbox_rounded,
-      _ => Icons.folder_outlined,
-    };
+    final picked = await showProjectMenu(context, _projectKey, ref);
+    if (picked != null) {
+      final idx = projects.indexWhere((p) => p.id == picked);
+      if (idx >= 0) setState(() => _localProjectIndex = idx);
+    }
   }
 
   Future<void> _pickDate() async {
-    final date = await showDatePicker(
-      context: context,
-      initialDate: _dueDate ?? DateTime.now(),
-      firstDate: DateTime.now().subtract(const Duration(days: 7)),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            datePickerTheme: DatePickerThemeData(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              todayBorder: const BorderSide(color: AppColors.accent, width: 1),
-              todayForegroundColor:
-                  WidgetStateProperty.all(AppColors.accent),
-              dayBackgroundColor: WidgetStateProperty.resolveWith((states) {
-                if (states.contains(WidgetState.selected)) return AppColors.accent;
-                return null;
-              }),
-              dayForegroundColor: WidgetStateProperty.resolveWith((states) {
-                if (states.contains(WidgetState.selected)) return Colors.white;
-                return null;
-              }),
-              dayShape: WidgetStateProperty.all(
-                RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(6),
-                ),
-              ),
-              headerHelpStyle: const TextStyle(fontSize: 11),
-              headerHeadlineStyle: const TextStyle(fontSize: 22),
-            ),
-          ),
-          child: MediaQuery(
-            data: MediaQuery.of(context).copyWith(textScaler: const TextScaler.linear(0.82)),
-            child: child!,
-          ),
-        );
-      },
-    );
-    if (date != null) {
-      setState(() => _dueDate = date);
-    }
+    final date = await pickDate(context, _dueDate);
+    if (date != null) setState(() => _dueDate = date);
   }
 
   @override
@@ -292,11 +192,16 @@ class _StickyComposerState extends ConsumerState<StickyComposer> {
                     Icon(
                       Icons.add_rounded,
                       size: 18,
-                      color: isExpanded
-                          ? AppColors.accent
-                          : (_isHovered
+                      color: _priority != TaskPriority.none
+                          ? switch (_priority) {
+                              TaskPriority.high => AppColors.priorityHigh,
+                              TaskPriority.medium => AppColors.priorityMedium,
+                              TaskPriority.low => AppColors.priorityLow,
+                              TaskPriority.none => AppColors.textMuted,
+                            }
+                          : isExpanded || _isHovered
                               ? AppColors.accent
-                              : AppColors.textMuted),
+                              : AppColors.textMuted,
                     ),
                     const SizedBox(width: AppSpacing.sm),
                     Expanded(
@@ -352,30 +257,6 @@ class _StickyComposerState extends ConsumerState<StickyComposer> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Description field
-                      ConstrainedBox(
-                        constraints: const BoxConstraints(maxHeight: 200),
-                        child: TextField(
-                          controller: _descriptionController,
-                          style: AppTypography.bodySmall.copyWith(
-                            color: AppColors.textSecondary,
-                          ),
-                          decoration: InputDecoration(
-                            hintText: 'Add description...',
-                            hintStyle: AppTypography.bodySmall.copyWith(
-                              color: AppColors.textMuted,
-                            ),
-                            border: InputBorder.none,
-                            enabledBorder: InputBorder.none,
-                            focusedBorder: InputBorder.none,
-                            contentPadding: const EdgeInsets.symmetric(vertical: 4),
-                            isDense: true,
-                          ),
-                          maxLines: 20,
-                          minLines: 1,
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.lg),
                       // Chips row
                       Row(
                         children: [
@@ -408,6 +289,36 @@ class _StickyComposerState extends ConsumerState<StickyComposer> {
                             onTap: _showProjectMenu,
                           ),
                         ],
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      const Divider(
+                        color: AppColors.border,
+                        height: 1,
+                        thickness: 1,
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      // Description field
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxHeight: 200),
+                        child: TextField(
+                          controller: _descriptionController,
+                          style: AppTypography.bodySmall.copyWith(
+                            color: AppColors.textSecondary,
+                          ),
+                          decoration: InputDecoration(
+                            hintText: 'Add description...',
+                            hintStyle: AppTypography.bodySmall.copyWith(
+                              color: AppColors.textMuted,
+                            ),
+                            border: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
+                            contentPadding: const EdgeInsets.symmetric(vertical: 4),
+                            isDense: true,
+                          ),
+                          maxLines: 20,
+                          minLines: 1,
+                        ),
                       ),
                     ],
                   ),

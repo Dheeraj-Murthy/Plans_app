@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/project_provider.dart';
 import '../../../theme/app_spacing.dart';
@@ -7,7 +6,10 @@ import '../../../theme/app_theme.dart';
 import '../../../theme/app_typography.dart';
 import '../../../shared/widgets/sidebar/sidebar_item.dart';
 import '../../../shared/widgets/sidebar/sidebar_section_header.dart';
+import '../../../shared/widgets/sidebar/sidebar_search.dart';
+import '../../../shared/widgets/sidebar/add_project_button.dart';
 import '../../tasks/providers/task_provider.dart';
+import '../../../shared/helpers/task_helpers.dart';
 
 class SlimSidebar extends ConsumerWidget {
   const SlimSidebar({super.key});
@@ -35,7 +37,7 @@ class SlimSidebar extends ConsumerWidget {
           const _SidebarHeader(),
 
           // Search
-          const _SidebarSearch(),
+          const SidebarSearch(),
 
           const SizedBox(height: AppSpacing.sm),
 
@@ -91,7 +93,7 @@ class SlimSidebar extends ConsumerWidget {
                     context, ref, project.id, project.name, details.globalPosition,
                   ),
                   child: SidebarItem(
-                    icon: _projectIcon(project.name),
+                    icon: projectIcon(project.name),
                     label: project.name,
                     count: count > 0 ? count : null,
                     isActive: selection is ProjectSelection &&
@@ -107,7 +109,7 @@ class SlimSidebar extends ConsumerWidget {
           ),
 
           // Add project button
-          const _AddProjectButton(),
+          const AddProjectButton(),
         ],
       ),
     );
@@ -231,16 +233,6 @@ class SlimSidebar extends ConsumerWidget {
     }
     Navigator.of(context).pop();
   }
-
-  IconData _projectIcon(String name) {
-    return switch (name.toLowerCase()) {
-      'work' => Icons.work_outline_rounded,
-      'personal' => Icons.person_outline_rounded,
-      'ideas' => Icons.lightbulb_outline_rounded,
-      'inbox' => Icons.inbox_rounded,
-      _ => Icons.folder_outlined,
-    };
-  }
 }
 
 class _SidebarHeader extends StatelessWidget {
@@ -278,240 +270,6 @@ class _SidebarHeader extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _SidebarSearch extends ConsumerStatefulWidget {
-  const _SidebarSearch();
-
-  @override
-  ConsumerState<_SidebarSearch> createState() => _SidebarSearchState();
-}
-
-class _SidebarSearchState extends ConsumerState<_SidebarSearch> {
-  final _controller = TextEditingController();
-  late final FocusNode _focusNode;
-  bool _isFocused = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _focusNode = FocusNode(
-      onKeyEvent: (node, event) {
-        if (event is KeyDownEvent &&
-            event.logicalKey == LogicalKeyboardKey.escape) {
-          _clear();
-          node.unfocus();
-          return KeyEventResult.handled;
-        }
-        return KeyEventResult.ignored;
-      },
-    );
-    _focusNode.addListener(() {
-      setState(() => _isFocused = _focusNode.hasFocus);
-    });
-  }
-
-  void _clear() {
-    _controller.clear();
-    ref.read(searchQueryProvider.notifier).state = '';
-    setState(() {});
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    _focusNode.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    ref.listen(searchFocusRequestProvider, (prev, _) => _focusNode.requestFocus());
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.sidebarPadding,
-        vertical: AppSpacing.sm,
-      ),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        height: 32,
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: _isFocused ? AppColors.accent : AppColors.border,
-          ),
-        ),
-        child: Row(
-          children: [
-            const SizedBox(width: AppSpacing.sm),
-            Icon(
-              Icons.search_rounded,
-              size: 15,
-              color: _isFocused ? AppColors.accent : AppColors.textMuted,
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: TextField(
-                controller: _controller,
-                focusNode: _focusNode,
-                style: const TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                decoration: InputDecoration(
-                  hintText: 'Search tasks...',
-                  hintStyle: const TextStyle(fontSize: 13, color: AppColors.textMuted),
-                  border: InputBorder.none,
-                  enabledBorder: InputBorder.none,
-                  focusedBorder: InputBorder.none,
-                  isDense: true,
-                  contentPadding: EdgeInsets.zero,
-                  suffixIcon: _controller.text.isNotEmpty
-                      ? GestureDetector(
-                          onTap: _clear,
-                          child: const Icon(Icons.close_rounded, size: 14, color: AppColors.textMuted),
-                        )
-                      : null,
-                ),
-                onChanged: (val) {
-                  ref.read(searchQueryProvider.notifier).state = val;
-                  setState(() {}); // rebuild for suffix icon
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _AddProjectButton extends ConsumerStatefulWidget {
-  const _AddProjectButton();
-
-  @override
-  ConsumerState<_AddProjectButton> createState() => _AddProjectButtonState();
-}
-
-class _AddProjectButtonState extends ConsumerState<_AddProjectButton> {
-  bool _isAdding = false;
-  bool _isHovered = false;
-  final _controller = TextEditingController();
-  late final FocusNode _focusNode;
-
-  @override
-  void initState() {
-    super.initState();
-    _focusNode = FocusNode(
-      onKeyEvent: (node, event) {
-        if (event is KeyDownEvent &&
-            event.logicalKey == LogicalKeyboardKey.escape) {
-          _cancel();
-          return KeyEventResult.handled;
-        }
-        return KeyEventResult.ignored;
-      },
-    );
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    _focusNode.dispose();
-    super.dispose();
-  }
-
-  void _startAdding() {
-    setState(() => _isAdding = true);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _focusNode.requestFocus());
-  }
-
-  void _submit() {
-    final name = _controller.text.trim();
-    if (name.isNotEmpty) {
-      final projects = ref.read(projectsProvider);
-      final colorIndex = projects.length % AppColors.projectColors.length;
-      ref.read(projectsProvider.notifier).addProject(name, colorIndex: colorIndex);
-    }
-    _cancel();
-  }
-
-  void _cancel() {
-    _controller.clear();
-    setState(() => _isAdding = false);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (_isAdding) {
-      return Padding(
-        padding: const EdgeInsets.fromLTRB(
-          AppSpacing.sidebarPadding,
-          AppSpacing.sm,
-          AppSpacing.sidebarPadding,
-          AppSpacing.lg,
-        ),
-        child: TextField(
-          controller: _controller,
-          focusNode: _focusNode,
-          style: AppTypography.bodySmall.copyWith(color: AppColors.textPrimary),
-          decoration: InputDecoration(
-            hintText: 'Project name...',
-            hintStyle: AppTypography.bodySmall.copyWith(color: AppColors.textMuted),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.sm,
-              vertical: AppSpacing.sm,
-            ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(6),
-              borderSide: const BorderSide(color: AppColors.border),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(6),
-              borderSide: const BorderSide(color: AppColors.border),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(6),
-              borderSide: const BorderSide(color: AppColors.accent),
-            ),
-            isDense: true,
-          ),
-          onSubmitted: (_) => _submit(),
-        ),
-      );
-    }
-
-    return MouseRegion(
-      onEnter: (_) => setState(() => _isHovered = true),
-      onExit: (_) => setState(() => _isHovered = false),
-      child: GestureDetector(
-        onTap: _startAdding,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.sidebarPadding + 4,
-            AppSpacing.sm,
-            AppSpacing.sidebarPadding,
-            AppSpacing.lg,
-          ),
-          child: Row(
-            children: [
-              Icon(
-                Icons.add_rounded,
-                size: 16,
-                color: _isHovered ? AppColors.textSecondary : AppColors.textMuted,
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Text(
-                'Add Project',
-                style: AppTypography.bodySmall.copyWith(
-                  color: _isHovered ? AppColors.textSecondary : AppColors.textMuted,
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
