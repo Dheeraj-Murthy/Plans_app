@@ -36,7 +36,7 @@ lib/
     tasks/
       providers/task_provider.dart       — filteredTasksProvider
       screens/task_list_screen.dart      — header + StickyComposer
-      widgets/task_tile.dart             — 48px rows, hover, strikethrough
+      widgets/task_tile.dart             — 48px rows, hover, strikethrough; checkbox grouped with title on same row; description indented 30px to align with title; tasks with description get CrossAxisAlignment.start + 2pt extra top padding; tasks without description get CrossAxisAlignment.center
       widgets/add_task_sheet.dart        — modal sheet
 fonts/
   Inter-{Regular,Medium,SemiBold,Bold}.ttf

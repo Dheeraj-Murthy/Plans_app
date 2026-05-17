@@ -57,13 +57,13 @@ class _TaskTileState extends ConsumerState<TaskTile> {
       transitionDuration: AppAnimations.normal,
       transitionBuilder: (context, animation, secondaryAnimation, child) {
         return SlideTransition(
-          position: Tween<Offset>(
-            begin: const Offset(0, -1),
-            end: Offset.zero,
-          ).animate(CurvedAnimation(
-            parent: animation,
-            curve: AppAnimations.easeOut,
-          )),
+          position: Tween<Offset>(begin: const Offset(0, -1), end: Offset.zero)
+              .animate(
+                CurvedAnimation(
+                  parent: animation,
+                  curve: AppAnimations.easeOut,
+                ),
+              ),
           child: child,
         );
       },
@@ -108,6 +108,10 @@ class _TaskTileState extends ConsumerState<TaskTile> {
   @override
   Widget build(BuildContext context) {
     final task = widget.task;
+    final hasDescription =
+        task.description != null &&
+        task.description!.isNotEmpty &&
+        !task.isCompleted;
 
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
@@ -121,166 +125,191 @@ class _TaskTileState extends ConsumerState<TaskTile> {
             color: _isHovered ? AppColors.surface : Colors.transparent,
             borderRadius: BorderRadius.circular(6),
           ),
-          padding: const EdgeInsets.symmetric(vertical: 6),
+          padding: EdgeInsets.only(top: hasDescription ? 8 : 6, bottom: 6),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: hasDescription
+                    ? CrossAxisAlignment.start
+                    : CrossAxisAlignment.center,
                 children: [
-                  // Priority bar
-                  AnimatedContainer(
-                    duration: AppAnimations.normal,
-                    curve: AppAnimations.easeOut,
-                    width: 3,
-                    height: task.isCompleted ? 0 : 20,
-                    decoration: BoxDecoration(
-                      color: switch (task.priority) {
-                        TaskPriority.high => AppColors.priorityHigh,
-                        TaskPriority.medium => AppColors.priorityMedium,
-                        TaskPriority.low => AppColors.priorityLow,
-                        TaskPriority.none => Colors.transparent,
-                      },
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.md),
-
-                  // Checkbox
-                  AppCheckbox(
-                    value: task.isCompleted,
-                    onChanged: (_) {
-                      ref.read(tasksProvider.notifier).toggleTask(task.id);
-                    },
-                    color: switch (task.priority) {
-                      TaskPriority.high => AppColors.priorityHigh,
-                      TaskPriority.medium => AppColors.priorityMedium,
-                      TaskPriority.low => AppColors.priorityLow,
-                      TaskPriority.none => null,
-                    },
-                  ),
-                  const SizedBox(width: AppSpacing.md),
-
-                  // Title + description
+                  // Priority bar + (checkbox grouped with title)
                   Expanded(
-                    child: Column(
+                    child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        GestureDetector(
-                          onTap: _openEditSheet,
-                          child: AnimatedDefaultTextStyle(
-                            duration: AppAnimations.medium,
-                            curve: AppAnimations.easeOut,
-                            style: AppTypography.bodyMedium.copyWith(
-                              color: task.isCompleted
-                                  ? AppColors.textMuted
-                                  : AppColors.textPrimary,
-                            ),
-                            child: task.isCompleted
-                                ? _StrikethroughText(
-                                    text: task.title,
-                                    style: AppTypography.bodyMedium.copyWith(
-                                      color: AppColors.textMuted,
-                                    ),
-                                  )
-                                : Text(task.title),
+                        AnimatedContainer(
+                          duration: AppAnimations.normal,
+                          curve: AppAnimations.easeOut,
+                          width: 3,
+                          height: task.isCompleted ? 0 : 20,
+                          decoration: BoxDecoration(
+                            color: switch (task.priority) {
+                              TaskPriority.high => AppColors.priorityHigh,
+                              TaskPriority.medium => AppColors.priorityMedium,
+                              TaskPriority.low => AppColors.priorityLow,
+                              TaskPriority.none => Colors.transparent,
+                            },
+                            borderRadius: BorderRadius.circular(2),
                           ),
                         ),
-                        if (task.description != null &&
-                            task.description!.isNotEmpty &&
-                            !task.isCompleted)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 4),
-                            child: Text(
-                              task.description!,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: AppTypography.bodySmall.copyWith(
-                                color: AppColors.textMuted,
+                        const SizedBox(width: AppSpacing.sm),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // Checkbox + title on same row
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  AppCheckbox(
+                                    value: task.isCompleted,
+                                    onChanged: (_) {
+                                      ref
+                                          .read(tasksProvider.notifier)
+                                          .toggleTask(task.id);
+                                    },
+                                    color: switch (task.priority) {
+                                      TaskPriority.high =>
+                                        AppColors.priorityHigh,
+                                      TaskPriority.medium =>
+                                        AppColors.priorityMedium,
+                                      TaskPriority.low => AppColors.priorityLow,
+                                      TaskPriority.none => null,
+                                    },
+                                  ),
+                                  const SizedBox(width: AppSpacing.md),
+                                  Expanded(
+                                    child: GestureDetector(
+                                      onTap: _openEditSheet,
+                                      child: AnimatedDefaultTextStyle(
+                                        duration: AppAnimations.medium,
+                                        curve: AppAnimations.easeOut,
+                                        style: AppTypography.bodyMedium
+                                            .copyWith(
+                                              color: task.isCompleted
+                                                  ? AppColors.textMuted
+                                                  : AppColors.textPrimary,
+                                            ),
+                                        child: task.isCompleted
+                                            ? _StrikethroughText(
+                                                text: task.title,
+                                                style: AppTypography.bodyMedium
+                                                    .copyWith(
+                                                      color:
+                                                          AppColors.textMuted,
+                                                    ),
+                                              )
+                                            : Text(task.title),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ),
+                              if (task.description != null &&
+                                  task.description!.isNotEmpty &&
+                                  !task.isCompleted)
+                                Padding(
+                                  // 18 (checkbox) + 12 (md spacing) = offset aligns with title
+                                  padding: const EdgeInsets.only(
+                                    left: 30,
+                                    top: 4,
+                                  ),
+                                  child: Text(
+                                    task.description!,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: AppTypography.bodySmall.copyWith(
+                                      color: AppColors.textMuted,
+                                    ),
+                                  ),
+                                ),
+                            ],
                           ),
+                        ),
                       ],
                     ),
                   ),
 
                   // Metadata row
                   Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Priority dot
-                  if (task.priority != TaskPriority.none && !task.isCompleted)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: PriorityDot(priority: task.priority),
-                    ),
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Priority dot
+                      if (task.priority != TaskPriority.none &&
+                          !task.isCompleted)
+                        Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: PriorityDot(priority: task.priority),
+                        ),
 
-                  // Due date pill
-                  if (task.dueDate != null && !task.isCompleted)
-                    AnimatedOpacity(
-                      duration: AppAnimations.fast,
-                      opacity: _isHovered ? 0 : 1,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: _isOverdue
-                              ? AppColors.danger.withValues(alpha: 0.12)
-                              : AppColors.surface,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          _formatDueDate(task.dueDate),
-                          style: AppTypography.label.copyWith(
-                            fontSize: 11,
-                            color: _isOverdue
-                                ? AppColors.danger
-                                : AppColors.textMuted,
+                      // Due date pill
+                      if (task.dueDate != null && !task.isCompleted)
+                        AnimatedOpacity(
+                          duration: AppAnimations.fast,
+                          opacity: _isHovered ? 0 : 1,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: _isOverdue
+                                  ? AppColors.danger.withValues(alpha: 0.12)
+                                  : AppColors.surface,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              _formatDueDate(task.dueDate),
+                              style: AppTypography.label.copyWith(
+                                fontSize: 11,
+                                color: _isOverdue
+                                    ? AppColors.danger
+                                    : AppColors.textMuted,
+                              ),
+                            ),
                           ),
                         ),
-                      ),
-                    ),
 
-                  // Hover actions
-                  AnimatedOpacity(
-                    duration: AppAnimations.fast,
-                    opacity: _isHovered ? 1 : 0,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        _HoverActionIcon(
-                          icon: Icons.flag_outlined,
-                          onTap: _cyclePriority,
+                      // Hover actions
+                      AnimatedOpacity(
+                        duration: AppAnimations.fast,
+                        opacity: _isHovered ? 1 : 0,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _HoverActionIcon(
+                              icon: Icons.flag_outlined,
+                              onTap: _cyclePriority,
+                            ),
+                            const SizedBox(width: 2),
+                            _HoverActionIcon(
+                              icon: Icons.delete_outline_rounded,
+                              onTap: () => ref
+                                  .read(tasksProvider.notifier)
+                                  .deleteTask(task.id),
+                            ),
+                            const SizedBox(width: 2),
+                            _HoverActionIcon(
+                              icon: Icons.more_horiz_rounded,
+                              onTap: _openEditSheet,
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 2),
-                        _HoverActionIcon(
-                          icon: Icons.delete_outline_rounded,
-                          onTap: () => ref
-                              .read(tasksProvider.notifier)
-                              .deleteTask(task.id),
-                        ),
-                        const SizedBox(width: 2),
-                        _HoverActionIcon(
-                          icon: Icons.more_horiz_rounded,
-                          onTap: _openEditSheet,
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
+
+                  const SizedBox(width: AppSpacing.sm),
                 ],
               ),
-
-              const SizedBox(width: AppSpacing.sm),
             ],
           ),
-        ],
+        ),
       ),
-    ),
-  ),
-);
+    );
   }
 }
 
@@ -351,9 +380,7 @@ class _HoverActionIconState extends State<_HoverActionIcon> {
           child: Icon(
             widget.icon,
             size: 15,
-            color: _isHovered
-                ? AppColors.textSecondary
-                : AppColors.textMuted,
+            color: _isHovered ? AppColors.textSecondary : AppColors.textMuted,
           ),
         ),
       ),
