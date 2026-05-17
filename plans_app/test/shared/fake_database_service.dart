@@ -41,9 +41,24 @@ class FakeDatabaseService extends DatabaseService {
     if (idx >= 0) _tasks[idx] = task;
   }
 
+  final List<Task> _deleted = [];
+
   @override
   Future<void> deleteTask(String id) async {
-    _tasks.removeWhere((t) => t.id == id);
+    final idx = _tasks.indexWhere((t) => t.id == id);
+    if (idx >= 0) {
+      _deleted.add(_tasks[idx]);
+      _tasks.removeAt(idx);
+    }
+  }
+
+  @override
+  Future<void> restoreTask(String id) async {
+    final task = _deleted.where((t) => t.id == id).firstOrNull;
+    if (task != null) {
+      _deleted.removeWhere((t) => t.id == id);
+      _tasks.add(task);
+    }
   }
 
   @override

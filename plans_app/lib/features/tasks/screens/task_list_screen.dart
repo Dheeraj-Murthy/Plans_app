@@ -61,6 +61,41 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<UndoAction?>(lastUndoActionProvider, (_, action) {
+      if (action == null) return;
+      final label = switch (action) {
+        TaskDeleted() => 'Task deleted',
+        TaskToggled() => 'Task completed',
+      };
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(label),
+          duration: const Duration(seconds: 4),
+          backgroundColor: AppColors.elevated,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+            side: const BorderSide(color: AppColors.border),
+          ),
+          action: SnackBarAction(
+            label: 'Undo',
+            textColor: AppColors.accent,
+            onPressed: () async {
+              final undo = ref.read(undoStackProvider.notifier).pop();
+              if (undo == null) return;
+              switch (undo) {
+                case TaskDeleted(:final task):
+                  await ref.read(tasksProvider.notifier).restoreTask(task);
+                case TaskToggled(:final id):
+                  ref.read(tasksProvider.notifier).toggleTask(id);
+              }
+            },
+          ),
+        ),
+      );
+    });
+
     final selection = ref.watch(sidebarSelectionProvider);
     final projects = ref.watch(projectsProvider);
     final filtered = ref.watch(filteredTasksProvider);
@@ -120,30 +155,37 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
                             constraints: const BoxConstraints(
                               maxWidth: AppSpacing.maxContentWidth,
                             ),
-                            child: ListView.builder(
+                            child: ListView(
                               padding: const EdgeInsets.only(top: 8),
-                              itemCount: incomplete.length + completed.length,
-                              itemBuilder: (context, index) {
-                                final task = index < incomplete.length
-                                    ? incomplete[index]
-                                    : completed[index - incomplete.length];
-
-                                final isFirstCompleted =
-                                    task.isCompleted &&
-                                    (index == 0 ||
-                                        !(index - 1 < incomplete.length
-                                            ? incomplete[index - 1]
-                                            : completed[index - 1 - incomplete.length])
-                                            .isCompleted);
-
-                                return Column(
-                                  children: [
-                                    if (isFirstCompleted && completed.isNotEmpty && incomplete.isNotEmpty)
-                                      _SectionDivider(count: completed.length),
-                                    TaskTile(task: task),
-                                  ],
-                                );
-                              },
+                              children: [
+                                if (incomplete.isNotEmpty)
+                                  ReorderableListView.builder(
+                                    shrinkWrap: true,
+                                    physics: const NeverScrollableScrollPhysics(),
+                                    itemCount: incomplete.length,
+                                    onReorder: (oldIndex, newIndex) {
+                                      ref
+                                          .read(tasksProvider.notifier)
+                                          .reorderTask(oldIndex, newIndex);
+                                    },
+                                    itemBuilder: (context, index) {
+                                      return TaskTile(
+                                        key: ValueKey(incomplete[index].id),
+                                        task: incomplete[index],
+                                        index: index,
+                                      );
+                                    },
+                                  ),
+                                if (completed.isNotEmpty && incomplete.isNotEmpty)
+                                  _SectionDivider(count: completed.length),
+                                ...completed.asMap().entries.map(
+                                  (e) => TaskTile(
+                                    key: ValueKey('completed-${e.value.id}'),
+                                    task: e.value,
+                                    index: incomplete.length + e.key,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ),

@@ -12,6 +12,7 @@ class Task {
   final String projectId;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final int sortOrder;
 
   Task({
     required this.id,
@@ -23,6 +24,7 @@ class Task {
     this.projectId = 'default',
     DateTime? createdAt,
     DateTime? updatedAt,
+    this.sortOrder = 0,
   })  : createdAt = createdAt ?? DateTime.now(),
         updatedAt = updatedAt ?? DateTime.now();
 
@@ -36,6 +38,7 @@ class Task {
     String? projectId,
     DateTime? createdAt,
     DateTime? updatedAt,
+    int? sortOrder,
   }) {
     return Task(
       id: id ?? this.id,
@@ -47,8 +50,7 @@ class Task {
       projectId: projectId ?? this.projectId,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? DateTime.now(),
+      sortOrder: sortOrder ?? this.sortOrder,
     );
   }
-
-
 }

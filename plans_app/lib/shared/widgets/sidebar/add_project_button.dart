@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../theme/app_spacing.dart';
-import '../../../theme/app_theme.dart';
-import '../../../theme/app_typography.dart';
 import '../../../features/projects/providers/project_provider.dart';
+import '../../../theme/app_theme.dart';
+import '../../../theme/app_spacing.dart';
+import '../../../theme/app_typography.dart';
 
 class AddProjectButton extends ConsumerStatefulWidget {
   const AddProjectButton({super.key});
@@ -14,22 +13,111 @@ class AddProjectButton extends ConsumerStatefulWidget {
 }
 
 class _AddProjectButtonState extends ConsumerState<AddProjectButton> {
-  bool _isAdding = false;
-  bool _isHovered = false;
   final _controller = TextEditingController();
-  late final FocusNode _focusNode;
+  int _selectedColor = 0;
 
-  @override
-  void initState() {
-    super.initState();
-    _focusNode = FocusNode(
-      onKeyEvent: (node, event) {
-        if (event is KeyDownEvent &&
-            event.logicalKey == LogicalKeyboardKey.escape) {
-          _cancel();
-          return KeyEventResult.handled;
-        }
-        return KeyEventResult.ignored;
+  void _showDialog() {
+    _selectedColor = ref.read(projectsProvider).length % 5;
+    _controller.clear();
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setDialogState) {
+            _controller.addListener(() => setDialogState(() {}));
+            final name = _controller.text.trim();
+            final canCreate = name.isNotEmpty;
+
+            void submit() {
+              if (!canCreate) return;
+              ref.read(projectsProvider.notifier).addProject(name, colorIndex: _selectedColor);
+              Navigator.of(ctx).pop();
+            }
+
+            return AlertDialog(
+              backgroundColor: AppColors.elevated,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: const BorderSide(color: AppColors.border),
+              ),
+              title: Text(
+                'New Project',
+                style: AppTypography.bodyLarge.copyWith(color: AppColors.textPrimary),
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: _controller,
+                    autofocus: true,
+                    onSubmitted: (_) => submit(),
+                    style: AppTypography.bodyMedium.copyWith(color: AppColors.textPrimary),
+                    decoration: InputDecoration(
+                      hintText: 'Project name',
+                      hintStyle: AppTypography.bodyMedium.copyWith(color: AppColors.textMuted),
+                      filled: true,
+                      fillColor: AppColors.surface,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: AppColors.border),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: AppColors.border),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: AppColors.accent),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(5, (i) {
+                      final isSelected = _selectedColor == i;
+                      return GestureDetector(
+                        onTap: () => setDialogState(() => _selectedColor = i),
+                        child: Container(
+                          width: 28,
+                          height: 28,
+                          margin: const EdgeInsets.symmetric(horizontal: 4),
+                          decoration: BoxDecoration(
+                            color: AppColors.projectColors[i],
+                            shape: BoxShape.circle,
+                            border: isSelected
+                                ? Border.all(color: Colors.white, width: 2.5)
+                                : null,
+                          ),
+                          child: isSelected
+                              ? const Icon(Icons.check, size: 16, color: Colors.white)
+                              : null,
+                        ),
+                      );
+                    }),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: Text(
+                    'Cancel',
+                    style: AppTypography.bodySmall.copyWith(color: AppColors.textMuted),
+                  ),
+                ),
+                TextButton(
+                  onPressed: canCreate ? submit : null,
+                  child: Text(
+                    'Create',
+                    style: AppTypography.bodySmall.copyWith(color: canCreate ? AppColors.accent : AppColors.textMuted),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
       },
     );
   }
@@ -37,95 +125,24 @@ class _AddProjectButtonState extends ConsumerState<AddProjectButton> {
   @override
   void dispose() {
     _controller.dispose();
-    _focusNode.dispose();
     super.dispose();
-  }
-
-  void _startAdding() {
-    setState(() => _isAdding = true);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _focusNode.requestFocus());
-  }
-
-  void _submit() {
-    final name = _controller.text.trim();
-    if (name.isNotEmpty) {
-      final projects = ref.read(projectsProvider);
-      final colorIndex = projects.length % AppColors.projectColors.length;
-      ref.read(projectsProvider.notifier).addProject(name, colorIndex: colorIndex);
-    }
-    _cancel();
-  }
-
-  void _cancel() {
-    _controller.clear();
-    setState(() => _isAdding = false);
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isAdding) {
-      return Padding(
-        padding: const EdgeInsets.fromLTRB(
-          AppSpacing.sidebarPadding,
-          AppSpacing.sm,
-          AppSpacing.sidebarPadding,
-          AppSpacing.lg,
-        ),
-        child: TextField(
-          controller: _controller,
-          focusNode: _focusNode,
-          style: AppTypography.bodySmall.copyWith(color: AppColors.textPrimary),
-          decoration: InputDecoration(
-            hintText: 'Project name...',
-            hintStyle: AppTypography.bodySmall.copyWith(color: AppColors.textMuted),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.sm,
-              vertical: AppSpacing.sm,
-            ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(6),
-              borderSide: const BorderSide(color: AppColors.border),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(6),
-              borderSide: const BorderSide(color: AppColors.border),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(6),
-              borderSide: const BorderSide(color: AppColors.accent),
-            ),
-            isDense: true,
-          ),
-          onSubmitted: (_) => _submit(),
-        ),
-      );
-    }
-
-    return MouseRegion(
-      onEnter: (_) => setState(() => _isHovered = true),
-      onExit: (_) => setState(() => _isHovered = false),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sidebarPadding),
       child: GestureDetector(
-        onTap: _startAdding,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.sidebarPadding + 4,
-            AppSpacing.sm,
-            AppSpacing.sidebarPadding,
-            AppSpacing.lg,
-          ),
+        onTap: _showDialog,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
           child: Row(
             children: [
-              Icon(
-                Icons.add_rounded,
-                size: 16,
-                color: _isHovered ? AppColors.textSecondary : AppColors.textMuted,
-              ),
+              Icon(Icons.add_rounded, size: 16, color: AppColors.textMuted),
               const SizedBox(width: AppSpacing.sm),
               Text(
                 'Add Project',
-                style: AppTypography.bodySmall.copyWith(
-                  color: _isHovered ? AppColors.textSecondary : AppColors.textMuted,
-                ),
+                style: AppTypography.sidebarItem.copyWith(color: AppColors.textMuted),
               ),
             ],
           ),

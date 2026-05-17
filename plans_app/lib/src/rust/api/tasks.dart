@@ -27,8 +27,14 @@ Future<Task> createTask({
 Future<Task> updateTask({required String taskJson}) =>
     RustLib.instance.api.crateApiTasksUpdateTask(taskJson: taskJson);
 
+Future<void> reorderTasks({required List<String> taskIds}) =>
+    RustLib.instance.api.crateApiTasksReorderTasks(taskIds: taskIds);
+
 Future<void> deleteTask({required String id}) =>
     RustLib.instance.api.crateApiTasksDeleteTask(id: id);
 
 Future<void> clearCompleted() =>
     RustLib.instance.api.crateApiTasksClearCompleted();
+
+Future<void> restoreTask({required String id}) =>
+    RustLib.instance.api.crateApiTasksRestoreTask(id: id);

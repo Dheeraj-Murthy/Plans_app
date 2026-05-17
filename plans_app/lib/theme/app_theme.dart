@@ -62,6 +62,16 @@ class AppTheme {
             letterSpacing: -0.2,
           ),
         ),
+        snackBarTheme: const SnackBarThemeData(
+          backgroundColor: AppColors.elevated,
+          contentTextStyle: TextStyle(color: AppColors.textPrimary),
+          actionTextColor: AppColors.accent,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(8)),
+            side: BorderSide(color: AppColors.border),
+          ),
+        ),
         dividerTheme: const DividerThemeData(
           color: AppColors.border,
           thickness: 1,

@@ -25,7 +25,8 @@ fn run_migrations(conn: &Connection) -> Result<(), String> {
             is_deleted INTEGER NOT NULL DEFAULT 0,
             project_id TEXT NOT NULL,
             created_at INTEGER NOT NULL,
-            updated_at INTEGER NOT NULL
+            updated_at INTEGER NOT NULL,
+            sort_order INTEGER NOT NULL DEFAULT 0
         );
         CREATE TABLE IF NOT EXISTS projects (
             id TEXT PRIMARY KEY,
@@ -43,6 +44,9 @@ fn run_migrations(conn: &Connection) -> Result<(), String> {
         );",
     )
     .map_err(|e| e.to_string())?;
+
+    conn.execute_batch("ALTER TABLE tasks ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0;")
+        .ok();
 
     let count: i64 = conn
         .query_row("SELECT COUNT(*) FROM projects WHERE is_deleted = 0", [], |r| {

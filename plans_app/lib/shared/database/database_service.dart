@@ -56,10 +56,20 @@ class DatabaseService {
         'project_id': task.projectId,
         'created_at': task.createdAt.millisecondsSinceEpoch,
         'updated_at': task.updatedAt.millisecondsSinceEpoch,
+        'sort_order': task.sortOrder,
       });
       await rust_tasks.updateTask(taskJson: json);
     } catch (e) {
       debugPrint('DatabaseService.updateTask failed: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> reorderTasks(List<String> orderedIds) async {
+    try {
+      await rust_tasks.reorderTasks(taskIds: orderedIds);
+    } catch (e) {
+      debugPrint('DatabaseService.reorderTasks failed: $e');
       rethrow;
     }
   }
@@ -69,6 +79,15 @@ class DatabaseService {
       await rust_tasks.deleteTask(id: id);
     } catch (e) {
       debugPrint('DatabaseService.deleteTask failed: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> restoreTask(String id) async {
+    try {
+      await rust_tasks.restoreTask(id: id);
+    } catch (e) {
+      debugPrint('DatabaseService.restoreTask failed: $e');
       rethrow;
     }
   }
@@ -143,6 +162,7 @@ class DatabaseService {
       projectId: t.projectId,
       createdAt: DateTime.fromMillisecondsSinceEpoch(t.createdAt),
       updatedAt: DateTime.fromMillisecondsSinceEpoch(t.updatedAt),
+      sortOrder: t.sortOrder.toInt(),
     );
   }
 

@@ -55,7 +55,7 @@ void main() {
       await waitForProjects(container);
       await container.read(projectsProvider.notifier).addProject('Original', colorIndex: 0);
       final added = container.read(projectsProvider).first;
-      await container.read(projectsProvider.notifier).updateProject(added.id, name: 'Renamed');
+      await container.read(projectsProvider.notifier).updateProject(added.id, name: 'Renamed', colorIndex: 0);
       expect(container.read(projectsProvider).first.name, 'Renamed');
       container.dispose();
     });

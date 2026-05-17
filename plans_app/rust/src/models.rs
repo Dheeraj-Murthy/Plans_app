@@ -11,6 +11,7 @@ pub struct Task {
     pub project_id: String,
     pub created_at: i64,
     pub updated_at: i64,
+    pub sort_order: i64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

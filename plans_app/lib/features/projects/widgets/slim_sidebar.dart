@@ -48,7 +48,6 @@ class SlimSidebar extends ConsumerWidget {
             count: totalTasks,
             isActive: selection is ViewSelection &&
                 selection.view == ViewType.inbox,
-            activeColor: AppColors.accent,
             onTap: () => ref
                 .read(sidebarSelectionProvider.notifier)
                 .state = const ViewSelection(ViewType.inbox),
@@ -59,7 +58,6 @@ class SlimSidebar extends ConsumerWidget {
             count: todayCount,
             isActive: selection is ViewSelection &&
                 selection.view == ViewType.today,
-            activeColor: AppColors.accent,
             onTap: () => ref
                 .read(sidebarSelectionProvider.notifier)
                 .state = const ViewSelection(ViewType.today),
@@ -70,7 +68,6 @@ class SlimSidebar extends ConsumerWidget {
             count: completedCount,
             isActive: selection is ViewSelection &&
                 selection.view == ViewType.completed,
-            activeColor: AppColors.success,
             onTap: () => ref
                 .read(sidebarSelectionProvider.notifier)
                 .state = const ViewSelection(ViewType.completed),
@@ -85,24 +82,18 @@ class SlimSidebar extends ConsumerWidget {
               itemCount: projects.length,
               itemBuilder: (context, index) {
                 final project = projects[index];
-                final color =
-                    AppColors.projectColors[project.colorIndex % AppColors.projectColors.length];
                 final count = ref.watch(projectTaskCountProvider(project.id));
-                return GestureDetector(
-                  onSecondaryTapDown: (details) => _showProjectMenu(
-                    context, ref, project.id, project.name, details.globalPosition,
-                  ),
-                  child: SidebarItem(
-                    icon: projectIcon(project.name),
-                    label: project.name,
-                    count: count > 0 ? count : null,
-                    isActive: selection is ProjectSelection &&
-                        selection.projectId == project.id,
-                    activeColor: color,
-                    onTap: () => ref
-                        .read(sidebarSelectionProvider.notifier)
-                        .state = ProjectSelection(project.id),
-                  ),
+                return SidebarItem(
+                  icon: projectIcon(project.name),
+                  label: project.name,
+                  projectId: project.id,
+                  colorIndex: project.colorIndex,
+                  count: count > 0 ? count : null,
+                  isActive: selection is ProjectSelection &&
+                      selection.projectId == project.id,
+                  onTap: () => ref
+                      .read(sidebarSelectionProvider.notifier)
+                      .state = ProjectSelection(project.id),
                 );
               },
             ),
@@ -113,125 +104,6 @@ class SlimSidebar extends ConsumerWidget {
         ],
       ),
     );
-  }
-
-  void _showProjectMenu(
-    BuildContext context,
-    WidgetRef ref,
-    String projectId,
-    String projectName,
-    Offset position,
-  ) {
-    final screenSize = MediaQuery.of(context).size;
-    showMenu<String>(
-      context: context,
-      position: RelativeRect.fromLTRB(
-        position.dx,
-        position.dy,
-        screenSize.width - position.dx,
-        screenSize.height - position.dy,
-      ),
-      items: [
-        PopupMenuItem(
-          value: 'rename',
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.edit_outlined, size: 15),
-              const SizedBox(width: 8),
-              Text('Rename', style: AppTypography.bodySmall),
-            ],
-          ),
-        ),
-        PopupMenuItem(
-          value: 'delete',
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.delete_outline_rounded, size: 15, color: AppColors.danger),
-              const SizedBox(width: 8),
-              Text('Delete', style: AppTypography.bodySmall.copyWith(color: AppColors.danger)),
-            ],
-          ),
-        ),
-      ],
-    ).then((action) async {
-      if (!context.mounted) return;
-      if (action == 'rename') {
-        _showRenameDialog(context, ref, projectId, projectName);
-      } else if (action == 'delete') {
-        final currentSelection = ref.read(sidebarSelectionProvider);
-        await ref.read(projectsProvider.notifier).deleteProject(projectId);
-        if (!context.mounted) return;
-        if (currentSelection is ProjectSelection &&
-            currentSelection.projectId == projectId) {
-          ref.read(sidebarSelectionProvider.notifier).state =
-              const ViewSelection(ViewType.inbox);
-        }
-      }
-    });
-  }
-
-  void _showRenameDialog(
-    BuildContext context,
-    WidgetRef ref,
-    String projectId,
-    String currentName,
-  ) {
-    final controller = TextEditingController(text: currentName);
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        title: Text('Rename Project', style: AppTypography.headingMedium),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          style: AppTypography.bodyMedium.copyWith(color: AppColors.textPrimary),
-          decoration: InputDecoration(
-            hintText: 'Project name',
-            hintStyle: AppTypography.bodyMedium.copyWith(color: AppColors.textMuted),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: AppColors.border),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: AppColors.accent),
-            ),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.md,
-              vertical: AppSpacing.sm,
-            ),
-          ),
-          onSubmitted: (_) => _submitRename(ctx, ref, projectId, controller.text),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: Text('Cancel', style: AppTypography.bodySmall.copyWith(color: AppColors.textMuted)),
-          ),
-          TextButton(
-            onPressed: () => _submitRename(ctx, ref, projectId, controller.text),
-            child: Text('Rename', style: AppTypography.bodySmall.copyWith(color: AppColors.accent)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _submitRename(
-    BuildContext context,
-    WidgetRef ref,
-    String projectId,
-    String name,
-  ) {
-    final trimmed = name.trim();
-    if (trimmed.isNotEmpty) {
-      ref.read(projectsProvider.notifier).updateProject(projectId, name: trimmed);
-    }
-    Navigator.of(context).pop();
   }
 }
 

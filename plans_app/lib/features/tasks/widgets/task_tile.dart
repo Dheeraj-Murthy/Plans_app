@@ -13,8 +13,9 @@ import '../../../shared/widgets/priority_dot.dart';
 
 class TaskTile extends ConsumerStatefulWidget {
   final Task task;
+  final int index;
 
-  const TaskTile({super.key, required this.task});
+  const TaskTile({super.key, required this.task, required this.index});
 
   @override
   ConsumerState<TaskTile> createState() => _TaskTileState();
@@ -135,6 +136,23 @@ class _TaskTileState extends ConsumerState<TaskTile> {
                     ? CrossAxisAlignment.start
                     : CrossAxisAlignment.center,
                 children: [
+                  // Drag handle
+                  SizedBox(
+                    width: 28,
+                    child: AnimatedOpacity(
+                      duration: AppAnimations.fast,
+                      opacity: _isHovered ? 1.0 : 0.0,
+                      child: ReorderableDragStartListener(
+                        index: widget.index,
+                        child: Icon(
+                          Icons.drag_indicator,
+                          size: 18,
+                          color: AppColors.textMuted.withValues(alpha: 0.4),
+                        ),
+                      ),
+                    ),
+                  ),
+
                   // Priority bar + (checkbox grouped with title)
                   Expanded(
                     child: Row(
@@ -168,9 +186,14 @@ class _TaskTileState extends ConsumerState<TaskTile> {
                                   AppCheckbox(
                                     value: task.isCompleted,
                                     onChanged: (_) {
-                                      ref
+                                      final wasCompleted = ref
                                           .read(tasksProvider.notifier)
                                           .toggleTask(task.id);
+                                      if (!wasCompleted) {
+                                        final action = TaskToggled(task.id, false);
+                                        ref.read(undoStackProvider.notifier).push(action);
+                                        ref.read(lastUndoActionProvider.notifier).state = action;
+                                      }
                                     },
                                     color: switch (task.priority) {
                                       TaskPriority.high =>
@@ -288,9 +311,16 @@ class _TaskTileState extends ConsumerState<TaskTile> {
                             const SizedBox(width: 2),
                             HoverActionIcon(
                               icon: Icons.delete_outline_rounded,
-                              onTap: () => ref
-                                  .read(tasksProvider.notifier)
-                                  .deleteTask(task.id),
+                              onTap: () {
+                                final deleted = ref
+                                    .read(tasksProvider.notifier)
+                                    .deleteTask(task.id);
+                                if (deleted != null) {
+                                  final action = TaskDeleted(deleted);
+                                  ref.read(undoStackProvider.notifier).push(action);
+                                  ref.read(lastUndoActionProvider.notifier).state = action;
+                                }
+                              },
                             ),
                             const SizedBox(width: 2),
                             HoverActionIcon(

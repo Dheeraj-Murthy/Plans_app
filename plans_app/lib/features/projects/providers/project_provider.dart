@@ -47,10 +47,10 @@ class ProjectsNotifier extends StateNotifier<List<Project>> {
     state = [...state, project];
   }
 
-  Future<void> updateProject(String id, {required String name}) async {
+  Future<void> updateProject(String id, {required String name, required int colorIndex}) async {
     final idx = state.indexWhere((p) => p.id == id);
     if (idx < 0) return;
-    final updated = state[idx].copyWith(name: name);
+    final updated = state[idx].copyWith(name: name, colorIndex: colorIndex);
     await _db.updateProject(updated);
     final list = [...state];
     list[idx] = updated;
