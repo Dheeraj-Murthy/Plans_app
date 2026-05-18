@@ -141,7 +141,13 @@ Future<DateTime?> pickDate(BuildContext context, DateTime? current) async {
   final time = await showTimePicker(
     context: context,
     initialTime: initialTime,
-    initialEntryMode: TimePickerEntryMode.input,
+    initialEntryMode: TimePickerEntryMode.dial,
+    builder: (context, child) => MediaQuery(
+      data: MediaQuery.of(context).copyWith(
+        textScaler: const TextScaler.linear(1.0),
+      ),
+      child: child!,
+    ),
   );
   if (time == null) {
     return DateTime(date.year, date.month, date.day, 9, 0);
