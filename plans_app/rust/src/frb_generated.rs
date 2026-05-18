@@ -140,6 +140,7 @@ fn wire__crate__api__tasks__create_task_impl(
             let api_due_date = <Option<i64>>::sse_decode(&mut deserializer);
             let api_priority = <i64>::sse_decode(&mut deserializer);
             let api_project_id = <String>::sse_decode(&mut deserializer);
+            let api_reminder_minutes = <Option<i64>>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| {
                 transform_result_sse::<_, String>((move || {
@@ -149,6 +150,7 @@ fn wire__crate__api__tasks__create_task_impl(
                         api_due_date,
                         api_priority,
                         api_project_id,
+                        api_reminder_minutes,
                     )?;
                     Ok(output_ok)
                 })())
@@ -577,6 +579,7 @@ impl SseDecode for crate::models::Task {
         let mut var_createdAt = <i64>::sse_decode(deserializer);
         let mut var_updatedAt = <i64>::sse_decode(deserializer);
         let mut var_sortOrder = <i64>::sse_decode(deserializer);
+        let mut var_reminderMinutes = <Option<i64>>::sse_decode(deserializer);
         return crate::models::Task {
             id: var_id,
             title: var_title,
@@ -588,6 +591,7 @@ impl SseDecode for crate::models::Task {
             created_at: var_createdAt,
             updated_at: var_updatedAt,
             sort_order: var_sortOrder,
+            reminder_minutes: var_reminderMinutes,
         };
     }
 }
@@ -681,6 +685,7 @@ impl flutter_rust_bridge::IntoDart for crate::models::Task {
             self.created_at.into_into_dart().into_dart(),
             self.updated_at.into_into_dart().into_dart(),
             self.sort_order.into_into_dart().into_dart(),
+            self.reminder_minutes.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -795,6 +800,7 @@ impl SseEncode for crate::models::Task {
         <i64>::sse_encode(self.created_at, serializer);
         <i64>::sse_encode(self.updated_at, serializer);
         <i64>::sse_encode(self.sort_order, serializer);
+        <Option<i64>>::sse_encode(self.reminder_minutes, serializer);
     }
 }
 

@@ -47,6 +47,8 @@ fn run_migrations(conn: &Connection) -> Result<(), String> {
 
     conn.execute_batch("ALTER TABLE tasks ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0;")
         .ok();
+    conn.execute_batch("ALTER TABLE tasks ADD COLUMN reminder_minutes INTEGER;")
+        .ok();
 
     let count: i64 = conn
         .query_row("SELECT COUNT(*) FROM projects WHERE is_deleted = 0", [], |r| {

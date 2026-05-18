@@ -13,6 +13,7 @@ class Task {
   final DateTime createdAt;
   final DateTime updatedAt;
   final int sortOrder;
+  final int? reminderMinutes;
 
   Task({
     required this.id,
@@ -25,6 +26,7 @@ class Task {
     DateTime? createdAt,
     DateTime? updatedAt,
     this.sortOrder = 0,
+    this.reminderMinutes,
   })  : createdAt = createdAt ?? DateTime.now(),
         updatedAt = updatedAt ?? DateTime.now();
 
@@ -33,6 +35,7 @@ class Task {
     String? title,
     Object? description = _absent,
     Object? dueDate = _absent,
+    Object? reminderMinutes = _absent,
     TaskPriority? priority,
     bool? isCompleted,
     String? projectId,
@@ -45,6 +48,7 @@ class Task {
       title: title ?? this.title,
       description: description == _absent ? this.description : description as String?,
       dueDate: dueDate == _absent ? this.dueDate : dueDate as DateTime?,
+      reminderMinutes: reminderMinutes == _absent ? this.reminderMinutes : reminderMinutes as int?,
       priority: priority ?? this.priority,
       isCompleted: isCompleted ?? this.isCompleted,
       projectId: projectId ?? this.projectId,

@@ -24,6 +24,7 @@ class _StickyComposerState extends ConsumerState<StickyComposer> {
   late final FocusNode _focusNode;
   final _priorityKey = GlobalKey();
   final _projectKey = GlobalKey();
+  final _reminderKey = GlobalKey();
 
   bool _isHovered = false;
   bool _hasText = false;
@@ -32,6 +33,7 @@ class _StickyComposerState extends ConsumerState<StickyComposer> {
   TaskPriority _priority = TaskPriority.none;
   DateTime? _dueDate;
   int _localProjectIndex = 0;
+  int? _reminderMinutes;
 
   @override
   void initState() {
@@ -106,12 +108,14 @@ class _StickyComposerState extends ConsumerState<StickyComposer> {
           dueDate: _dueDate,
           priority: _priority,
           projectId: projectId,
+          reminderMinutes: _reminderMinutes,
         );
     _titleController.clear();
     _descriptionController.clear();
     setState(() {
       _priority = TaskPriority.none;
       _dueDate = null;
+      _reminderMinutes = null;
       _isExpanded = false;
     });
     _focusNode.unfocus();
@@ -123,9 +127,61 @@ class _StickyComposerState extends ConsumerState<StickyComposer> {
     setState(() {
       _priority = TaskPriority.none;
       _dueDate = null;
+      _reminderMinutes = null;
       _isExpanded = false;
     });
     _focusNode.unfocus();
+  }
+
+  static const _reminderNone = -1;
+
+  String get _reminderLabel => switch (_reminderMinutes) {
+        null => 'Remind',
+        0 => 'At due time',
+        5 => '5 min before',
+        15 => '15 min before',
+        30 => '30 min before',
+        60 => '1 hr before',
+        _ => '$_reminderMinutes min before',
+      };
+
+  void _showReminderMenu() async {
+    final options = [_reminderNone, 0, 5, 15, 30, 60];
+    final labels = ['None', 'At due time', '5 min before', '15 min before', '30 min before', '1 hr before'];
+    final renderBox = _reminderKey.currentContext?.findRenderObject() as RenderBox?;
+    if (renderBox == null) return;
+    final offset = renderBox.localToGlobal(Offset.zero);
+    final current = _reminderMinutes ?? _reminderNone;
+    final result = await showMenu<int>(
+      context: context,
+      color: AppColors.elevated,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: const BorderSide(color: AppColors.border),
+      ),
+      position: RelativeRect.fromLTRB(
+        offset.dx,
+        offset.dy + renderBox.size.height + 4,
+        offset.dx + renderBox.size.width,
+        0,
+      ),
+      items: [
+        for (var i = 0; i < options.length; i++)
+          PopupMenuItem<int>(
+            value: options[i],
+            child: Text(
+              labels[i],
+              style: TextStyle(
+                color: current == options[i] ? AppColors.accent : AppColors.textPrimary,
+                fontSize: 13,
+              ),
+            ),
+          ),
+      ],
+    );
+    if (result != null) {
+      setState(() => _reminderMinutes = result == _reminderNone ? null : result);
+    }
   }
 
   void _showPriorityMenu() async {
@@ -277,9 +333,17 @@ class _StickyComposerState extends ConsumerState<StickyComposer> {
                           AppChip(
                             icon: Icons.calendar_today_outlined,
                             label: _dueDate != null
-                                ? '${_dueDate!.month}/${_dueDate!.day}'
+                                ? formatDueDateTime(_dueDate!)
                                 : 'Due date',
                             onTap: _pickDate,
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                          AppChip(
+                            key: _reminderKey,
+                            icon: Icons.notifications_outlined,
+                            label: _reminderLabel,
+                            color: _reminderMinutes != null ? AppColors.accent : null,
+                            onTap: _showReminderMenu,
                           ),
                           const SizedBox(width: AppSpacing.sm),
                           AppChip(

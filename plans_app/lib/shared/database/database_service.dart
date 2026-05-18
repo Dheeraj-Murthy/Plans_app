@@ -28,6 +28,7 @@ class DatabaseService {
     DateTime? dueDate,
     int priority = 0,
     String projectId = 'default',
+    int? reminderMinutes,
   }) async {
     try {
       final raw = await rust_tasks.createTask(
@@ -36,6 +37,7 @@ class DatabaseService {
         dueDate: dueDate?.millisecondsSinceEpoch,
         priority: priority,
         projectId: projectId,
+        reminderMinutes: reminderMinutes,
       );
       return _rustTaskToDomain(raw);
     } catch (e) {
@@ -57,6 +59,7 @@ class DatabaseService {
         'created_at': task.createdAt.millisecondsSinceEpoch,
         'updated_at': task.updatedAt.millisecondsSinceEpoch,
         'sort_order': task.sortOrder,
+        'reminder_minutes': task.reminderMinutes,
       });
       await rust_tasks.updateTask(taskJson: json);
     } catch (e) {
@@ -163,6 +166,7 @@ class DatabaseService {
       createdAt: DateTime.fromMillisecondsSinceEpoch(t.createdAt),
       updatedAt: DateTime.fromMillisecondsSinceEpoch(t.updatedAt),
       sortOrder: t.sortOrder.toInt(),
+      reminderMinutes: t.reminderMinutes?.toInt(),
     );
   }
 

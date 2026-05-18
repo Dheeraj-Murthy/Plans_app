@@ -94,10 +94,10 @@ Future<String?> showProjectMenu(
   );
 }
 
-Future<DateTime?> pickDate(BuildContext context, DateTime? currentDate) async {
+Future<DateTime?> pickDate(BuildContext context, DateTime? current) async {
   final date = await showDatePicker(
     context: context,
-    initialDate: currentDate ?? DateTime.now(),
+    initialDate: current ?? DateTime.now(),
     firstDate: DateTime.now().subtract(const Duration(days: 7)),
     lastDate: DateTime.now().add(const Duration(days: 365)),
     builder: (context, child) {
@@ -108,8 +108,7 @@ Future<DateTime?> pickDate(BuildContext context, DateTime? currentDate) async {
               borderRadius: BorderRadius.circular(12),
             ),
             todayBorder: const BorderSide(color: AppColors.accent, width: 1),
-            todayForegroundColor:
-                WidgetStateProperty.all(AppColors.accent),
+            todayForegroundColor: WidgetStateProperty.all(AppColors.accent),
             dayBackgroundColor: WidgetStateProperty.resolveWith((states) {
               if (states.contains(WidgetState.selected)) return AppColors.accent;
               return null;
@@ -119,9 +118,7 @@ Future<DateTime?> pickDate(BuildContext context, DateTime? currentDate) async {
               return null;
             }),
             dayShape: WidgetStateProperty.all(
-              RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(6),
-              ),
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
             ),
             headerHelpStyle: const TextStyle(fontSize: 11),
             headerHeadlineStyle: const TextStyle(fontSize: 22),
@@ -135,5 +132,39 @@ Future<DateTime?> pickDate(BuildContext context, DateTime? currentDate) async {
       );
     },
   );
-  return date;
+  if (date == null) return null;
+
+  if (!context.mounted) return date;
+  final initialTime = current != null
+      ? TimeOfDay(hour: current.hour, minute: current.minute)
+      : TimeOfDay.now();
+  final time = await showTimePicker(
+    context: context,
+    initialTime: initialTime,
+    initialEntryMode: TimePickerEntryMode.input,
+  );
+  if (time == null) return date;
+  return DateTime(date.year, date.month, date.day, time.hour, time.minute);
+}
+
+String formatDueDateTime(DateTime dt) {
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  final due = DateTime(dt.year, dt.month, dt.day);
+  final diff = due.difference(today).inDays;
+
+  final datePart = switch (diff) {
+    0 => 'Today',
+    1 => 'Tomorrow',
+    -1 => 'Yesterday',
+    _ => '${dt.month}/${dt.day}',
+  };
+
+  final hasTime = dt.hour != 0 || dt.minute != 0;
+  if (!hasTime) return datePart;
+
+  final hour = dt.hour % 12 == 0 ? 12 : dt.hour % 12;
+  final minute = dt.minute.toString().padLeft(2, '0');
+  final period = dt.hour < 12 ? 'AM' : 'PM';
+  return '$datePart $hour:$minute $period';
 }

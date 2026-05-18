@@ -12,6 +12,8 @@ pub struct Task {
     pub created_at: i64,
     pub updated_at: i64,
     pub sort_order: i64,
+    #[serde(default)]
+    pub reminder_minutes: Option<i64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -55,6 +55,17 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
         ref.read(sidebarSelectionProvider.notifier).state =
             const ViewSelection(ViewType.completed);
         return true;
+      case LogicalKeyboardKey.keyZ:
+        final action = ref.read(undoStackProvider.notifier).pop();
+        if (action != null) {
+          switch (action) {
+            case TaskDeleted(:final task):
+              ref.read(tasksProvider.notifier).restoreTask(task);
+            case TaskToggled(:final id):
+              ref.read(tasksProvider.notifier).toggleTask(id);
+          }
+        }
+        return true;
     }
     return false;
   }
@@ -161,6 +172,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
                                 if (incomplete.isNotEmpty)
                                   ReorderableListView.builder(
                                     shrinkWrap: true,
+                                    buildDefaultDragHandles: false,
                                     physics: const NeverScrollableScrollPhysics(),
                                     itemCount: incomplete.length,
                                     onReorder: (oldIndex, newIndex) {

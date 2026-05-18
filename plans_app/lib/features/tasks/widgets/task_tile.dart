@@ -136,7 +136,6 @@ class _TaskTileState extends ConsumerState<TaskTile> {
                     ? CrossAxisAlignment.start
                     : CrossAxisAlignment.center,
                 children: [
-                  // Drag handle
                   SizedBox(
                     width: 28,
                     child: AnimatedOpacity(
@@ -152,8 +151,6 @@ class _TaskTileState extends ConsumerState<TaskTile> {
                       ),
                     ),
                   ),
-
-                  // Priority bar + (checkbox grouped with title)
                   Expanded(
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,

@@ -7,6 +7,7 @@ import 'package:plans_app/src/rust/frb_generated.dart';
 import 'theme/app_theme.dart';
 import 'routing/app_router.dart';
 import 'shared/database/database_service.dart';
+import 'shared/notifications/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -19,6 +20,7 @@ void main() async {
 
   final dir = await getApplicationDocumentsDirectory();
   await rust_api.initDatabase(path: '${dir.path}/plans.db');
+  await NotificationService.init();
 
   final db = DatabaseService();
 

@@ -25,8 +25,10 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
   late DateTime? _dueDate;
   late TaskPriority _priority;
   late int _localProjectIndex;
+  late int? _reminderMinutes;
   final _priorityKey = GlobalKey();
   final _projectKey = GlobalKey();
+  final _reminderKey = GlobalKey();
 
   @override
   void initState() {
@@ -37,6 +39,7 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
         TextEditingController(text: task?.description ?? '');
     _dueDate = task?.dueDate;
     _priority = task?.priority ?? TaskPriority.none;
+    _reminderMinutes = task?.reminderMinutes;
 
     if (task != null) {
       final projects = ref.read(projectsProvider);
@@ -134,9 +137,17 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
               AppChip(
                 icon: Icons.calendar_today_outlined,
                 label: _dueDate != null
-                    ? '${_dueDate!.month}/${_dueDate!.day}'
+                    ? formatDueDateTime(_dueDate!)
                     : 'Due date',
                 onTap: _pickDate,
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              AppChip(
+                key: _reminderKey,
+                icon: Icons.notifications_outlined,
+                label: _reminderLabel,
+                color: _reminderMinutes != null ? AppColors.accent : null,
+                onTap: _showReminderMenu,
               ),
               const SizedBox(width: AppSpacing.sm),
               AppChip(
@@ -236,6 +247,61 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
   );
   }
 
+  String get _reminderLabel {
+    return switch (_reminderMinutes) {
+      null => 'Remind',
+      0 => 'At due time',
+      5 => '5 min before',
+      15 => '15 min before',
+      30 => '30 min before',
+      60 => '1 hr before',
+      _ => '$_reminderMinutes min before',
+    };
+  }
+
+  static const _reminderNone = -1;
+
+  void _showReminderMenu() async {
+    final options = [_reminderNone, 0, 5, 15, 30, 60];
+    final labels = ['None', 'At due time', '5 min before', '15 min before', '30 min before', '1 hr before'];
+    final renderBox = _reminderKey.currentContext?.findRenderObject() as RenderBox?;
+    if (renderBox == null) return;
+    final offset = renderBox.localToGlobal(Offset.zero);
+    final current = _reminderMinutes ?? _reminderNone;
+    final result = await showMenu<int>(
+      context: context,
+      color: AppColors.elevated,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: const BorderSide(color: AppColors.border),
+      ),
+      position: RelativeRect.fromLTRB(
+        offset.dx,
+        offset.dy + renderBox.size.height + 4,
+        offset.dx + renderBox.size.width,
+        0,
+      ),
+      items: [
+        for (var i = 0; i < options.length; i++)
+          PopupMenuItem<int>(
+            value: options[i],
+            child: Text(
+              labels[i],
+              style: TextStyle(
+                color: current == options[i]
+                    ? AppColors.accent
+                    : AppColors.textPrimary,
+                fontSize: 13,
+              ),
+            ),
+          ),
+      ],
+    );
+    if (result != null) {
+      setState(() => _reminderMinutes = result == _reminderNone ? null : result);
+    }
+  }
+
   void _showPriorityMenu() async {
     final picked = await showPriorityMenu(context, _priorityKey);
     if (picked != null) setState(() => _priority = picked);
@@ -277,6 +343,7 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
           dueDate: _dueDate,
           priority: _priority,
           projectId: projectId,
+          reminderMinutes: _reminderMinutes,
         ),
       );
     } else {
@@ -286,6 +353,7 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
         dueDate: _dueDate,
         priority: _priority,
         projectId: projectId,
+        reminderMinutes: _reminderMinutes,
       );
     }
 

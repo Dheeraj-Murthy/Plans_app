@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/task.dart';
 import '../../projects/providers/project_provider.dart';
 import '../../../shared/database/database_service.dart';
+import '../../../shared/notifications/notification_service.dart';
 
 sealed class UndoAction {}
 
@@ -120,6 +121,7 @@ class TasksNotifier extends StateNotifier<List<Task>> {
   void _load() {
     _db.getTasks().then((tasks) {
       state = tasks;
+      NotificationService.rescheduleAll(tasks);
     });
   }
 
@@ -129,6 +131,7 @@ class TasksNotifier extends StateNotifier<List<Task>> {
     DateTime? dueDate,
     TaskPriority priority = TaskPriority.none,
     String projectId = 'default',
+    int? reminderMinutes,
   }) async {
     final task = await _db.insertTask(
       title: title,
@@ -136,8 +139,10 @@ class TasksNotifier extends StateNotifier<List<Task>> {
       dueDate: dueDate,
       priority: priority.index,
       projectId: projectId,
+      reminderMinutes: reminderMinutes,
     );
     state = [...state, task];
+    NotificationService.scheduleForTask(task);
   }
 
   bool toggleTask(String id) {
@@ -147,6 +152,11 @@ class TasksNotifier extends StateNotifier<List<Task>> {
       wasCompleted = t.isCompleted;
       final toggled = t.copyWith(isCompleted: !t.isCompleted);
       _db.updateTask(toggled);
+      if (toggled.isCompleted) {
+        NotificationService.cancelForTask(id);
+      } else {
+        NotificationService.scheduleForTask(toggled);
+      }
       return toggled;
     }).toList();
     return wasCompleted;
@@ -156,12 +166,14 @@ class TasksNotifier extends StateNotifier<List<Task>> {
     final task = state.where((t) => t.id == id).firstOrNull;
     state = state.where((t) => t.id != id).toList();
     _db.deleteTask(id);
+    NotificationService.cancelForTask(id);
     return task;
   }
 
   Future<void> restoreTask(Task task) async {
     await _db.restoreTask(task.id);
     state = [...state, task];
+    NotificationService.scheduleForTask(task);
   }
 
   Future<void> clearCompleted() async {
@@ -175,6 +187,7 @@ class TasksNotifier extends StateNotifier<List<Task>> {
     state = state.map((t) {
       if (t.id != id) return t;
       _db.updateTask(updated);
+      NotificationService.scheduleForTask(updated);
       return updated;
     }).toList();
   }
