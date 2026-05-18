@@ -1,113 +1,22 @@
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/task.dart';
 import '../providers/task_provider.dart';
 import '../widgets/task_tile.dart';
-import '../../projects/widgets/slim_sidebar.dart';
 import '../../projects/providers/project_provider.dart';
 import '../../../theme/app_spacing.dart';
 import '../../../theme/app_theme.dart';
 import '../../../theme/app_typography.dart';
 import '../../../shared/widgets/sidebar/sticky_composer.dart';
 
-class TaskListScreen extends ConsumerStatefulWidget {
+class TaskListScreen extends ConsumerWidget {
   const TaskListScreen({super.key});
 
   @override
-  ConsumerState<TaskListScreen> createState() => _TaskListScreenState();
-}
-
-class _TaskListScreenState extends ConsumerState<TaskListScreen> {
-  @override
-  void initState() {
-    super.initState();
-    HardwareKeyboard.instance.addHandler(_handleKeyEvent);
-  }
-
-  @override
-  void dispose() {
-    HardwareKeyboard.instance.removeHandler(_handleKeyEvent);
-    super.dispose();
-  }
-
-  bool _handleKeyEvent(KeyEvent event) {
-    if (event is! KeyDownEvent) return false;
-    final isCmd = HardwareKeyboard.instance.isMetaPressed;
-    if (!isCmd) return false;
-
-    switch (event.logicalKey) {
-      case LogicalKeyboardKey.keyN:
-        ref.read(composerFocusRequestProvider.notifier).state++;
-        return true;
-      case LogicalKeyboardKey.keyK:
-        ref.read(searchFocusRequestProvider.notifier).state++;
-        return true;
-      case LogicalKeyboardKey.digit1:
-        ref.read(sidebarSelectionProvider.notifier).state =
-            const ViewSelection(ViewType.inbox);
-        return true;
-      case LogicalKeyboardKey.digit2:
-        ref.read(sidebarSelectionProvider.notifier).state =
-            const ViewSelection(ViewType.today);
-        return true;
-      case LogicalKeyboardKey.digit3:
-        ref.read(sidebarSelectionProvider.notifier).state =
-            const ViewSelection(ViewType.completed);
-        return true;
-      case LogicalKeyboardKey.keyZ:
-        final action = ref.read(undoStackProvider.notifier).pop();
-        if (action != null) {
-          switch (action) {
-            case TaskDeleted(:final task):
-              ref.read(tasksProvider.notifier).restoreTask(task);
-            case TaskToggled(:final id):
-              ref.read(tasksProvider.notifier).toggleTask(id);
-          }
-        }
-        return true;
-    }
-    return false;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    ref.listen<UndoAction?>(lastUndoActionProvider, (_, action) {
-      if (action == null) return;
-      final label = switch (action) {
-        TaskDeleted() => 'Task deleted',
-        TaskToggled() => 'Task completed',
-      };
-      ScaffoldMessenger.of(context).clearSnackBars();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(label),
-          duration: const Duration(seconds: 4),
-          backgroundColor: AppColors.elevated,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-            side: const BorderSide(color: AppColors.border),
-          ),
-          action: SnackBarAction(
-            label: 'Undo',
-            textColor: AppColors.accent,
-            onPressed: () async {
-              final undo = ref.read(undoStackProvider.notifier).pop();
-              if (undo == null) return;
-              switch (undo) {
-                case TaskDeleted(:final task):
-                  await ref.read(tasksProvider.notifier).restoreTask(task);
-                case TaskToggled(:final id):
-                  ref.read(tasksProvider.notifier).toggleTask(id);
-              }
-            },
-          ),
-        ),
-      );
-    });
-
-    final selection = ref.watch(sidebarSelectionProvider);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final SidebarSelection selection = ref.watch(sidebarSelectionProvider);
     final projects = ref.watch(projectsProvider);
     final filtered = ref.watch(filteredTasksProvider);
 
@@ -131,87 +40,79 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
       }
     }
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: Row(
-        children: [
-          const SlimSidebar(),
-          Expanded(
-            child: Column(
-              children: [
-                _buildHeader(title, completed),
-                Expanded(
-                  child: filtered.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.check_circle_outline_rounded,
-                                size: 48,
-                                color: AppColors.textMuted.withValues(alpha: 0.3),
-                              ),
-                              const SizedBox(height: AppSpacing.md),
-                              Text(
-                                'No tasks yet',
-                                style: AppTypography.bodyMedium.copyWith(
-                                  color: AppColors.textMuted,
-                                ),
-                              ),
-                            ],
+    final isDesktop = !kIsWeb && Platform.isMacOS;
+
+    return Column(
+      children: [
+        if (isDesktop) _buildHeader(ref, title, completed),
+        Expanded(
+          child: filtered.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.check_circle_outline_rounded,
+                        size: 48,
+                        color: AppColors.textMuted.withValues(alpha: 0.3),
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      Text(
+                        'No tasks yet',
+                        style: AppTypography.bodyMedium.copyWith(
+                          color: AppColors.textMuted,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              : Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(
+                      maxWidth: AppSpacing.maxContentWidth,
+                    ),
+                    child: ListView(
+                      padding: const EdgeInsets.only(top: 8),
+                      children: [
+                        if (incomplete.isNotEmpty)
+                          ReorderableListView.builder(
+                            shrinkWrap: true,
+                            buildDefaultDragHandles: false,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: incomplete.length,
+                            onReorder: (oldIndex, newIndex) {
+                              ref
+                                  .read(tasksProvider.notifier)
+                                  .reorderTask(oldIndex, newIndex);
+                            },
+                            itemBuilder: (context, index) {
+                              return TaskTile(
+                                key: ValueKey(incomplete[index].id),
+                                task: incomplete[index],
+                                index: index,
+                              );
+                            },
                           ),
-                        )
-                      : Center(
-                          child: ConstrainedBox(
-                            constraints: const BoxConstraints(
-                              maxWidth: AppSpacing.maxContentWidth,
-                            ),
-                            child: ListView(
-                              padding: const EdgeInsets.only(top: 8),
-                              children: [
-                                if (incomplete.isNotEmpty)
-                                  ReorderableListView.builder(
-                                    shrinkWrap: true,
-                                    buildDefaultDragHandles: false,
-                                    physics: const NeverScrollableScrollPhysics(),
-                                    itemCount: incomplete.length,
-                                    onReorder: (oldIndex, newIndex) {
-                                      ref
-                                          .read(tasksProvider.notifier)
-                                          .reorderTask(oldIndex, newIndex);
-                                    },
-                                    itemBuilder: (context, index) {
-                                      return TaskTile(
-                                        key: ValueKey(incomplete[index].id),
-                                        task: incomplete[index],
-                                        index: index,
-                                      );
-                                    },
-                                  ),
-                                if (completed.isNotEmpty && incomplete.isNotEmpty)
-                                  _SectionDivider(count: completed.length),
-                                ...completed.asMap().entries.map(
-                                  (e) => TaskTile(
-                                    key: ValueKey('completed-${e.value.id}'),
-                                    task: e.value,
-                                    index: incomplete.length + e.key,
-                                  ),
-                                ),
-                              ],
-                            ),
+                        if (completed.isNotEmpty && incomplete.isNotEmpty)
+                          _SectionDivider(count: completed.length),
+                        ...completed.asMap().entries.map(
+                          (e) => TaskTile(
+                            key: ValueKey('completed-${e.value.id}'),
+                            task: e.value,
+                            index: incomplete.length + e.key,
                           ),
                         ),
+                      ],
+                    ),
+                  ),
                 ),
-                const StickyComposer(),
-              ],
-            ),
-          ),
-        ],
-      ),
+        ),
+        if (isDesktop) const StickyComposer(),
+      ],
     );
   }
 
-  Widget _buildHeader(String title, List<Task> completed) {
+  Widget _buildHeader(WidgetRef ref, String title, List<Task> completed) {
     return Container(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.xl,

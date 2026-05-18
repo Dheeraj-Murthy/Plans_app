@@ -38,7 +38,7 @@ class _SidebarSearchState extends ConsumerState<SidebarSearch> {
 
   void _clear() {
     _controller.clear();
-    ref.read(searchQueryProvider.notifier).state = '';
+    ref.read(searchQueryProvider.notifier).set('');
     setState(() {});
   }
 
@@ -98,7 +98,7 @@ class _SidebarSearchState extends ConsumerState<SidebarSearch> {
                       : null,
                 ),
                 onChanged: (val) {
-                  ref.read(searchQueryProvider.notifier).state = val;
+                  ref.read(searchQueryProvider.notifier).set(val);
                   setState(() {});
                 },
               ),

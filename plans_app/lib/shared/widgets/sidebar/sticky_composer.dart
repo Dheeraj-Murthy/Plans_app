@@ -314,7 +314,9 @@ class _StickyComposerState extends ConsumerState<StickyComposer> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Chips row
-                      Row(
+                      Wrap(
+                        spacing: AppSpacing.sm,
+                        runSpacing: AppSpacing.sm,
                         children: [
                           AppChip(
                             key: _priorityKey,
@@ -329,7 +331,6 @@ class _StickyComposerState extends ConsumerState<StickyComposer> {
                                     : null,
                             onTap: _showPriorityMenu,
                           ),
-                          const SizedBox(width: AppSpacing.sm),
                           AppChip(
                             icon: Icons.calendar_today_outlined,
                             label: _dueDate != null
@@ -337,7 +338,6 @@ class _StickyComposerState extends ConsumerState<StickyComposer> {
                                 : 'Due date',
                             onTap: _pickDate,
                           ),
-                          const SizedBox(width: AppSpacing.sm),
                           AppChip(
                             key: _reminderKey,
                             icon: Icons.notifications_outlined,
@@ -345,7 +345,6 @@ class _StickyComposerState extends ConsumerState<StickyComposer> {
                             color: _reminderMinutes != null ? AppColors.accent : null,
                             onTap: _showReminderMenu,
                           ),
-                          const SizedBox(width: AppSpacing.sm),
                           AppChip(
                             key: _projectKey,
                             icon: Icons.folder_outlined,

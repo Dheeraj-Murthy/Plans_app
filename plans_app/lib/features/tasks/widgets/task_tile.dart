@@ -189,7 +189,7 @@ class _TaskTileState extends ConsumerState<TaskTile> {
                                       if (!wasCompleted) {
                                         final action = TaskToggled(task.id, false);
                                         ref.read(undoStackProvider.notifier).push(action);
-                                        ref.read(lastUndoActionProvider.notifier).state = action;
+                                        ref.read(lastUndoActionProvider.notifier).set(action);
                                       }
                                     },
                                     color: switch (task.priority) {
@@ -315,7 +315,7 @@ class _TaskTileState extends ConsumerState<TaskTile> {
                                 if (deleted != null) {
                                   final action = TaskDeleted(deleted);
                                   ref.read(undoStackProvider.notifier).push(action);
-                                  ref.read(lastUndoActionProvider.notifier).state = action;
+                                  ref.read(lastUndoActionProvider.notifier).set(action);
                                 }
                               },
                             ),

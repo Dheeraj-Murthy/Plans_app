@@ -1,12 +1,12 @@
 import 'package:go_router/go_router.dart';
-import '../features/tasks/screens/task_list_screen.dart';
+import '../shell/platform_shell.dart';
 
 final appRouter = GoRouter(
   initialLocation: '/',
   routes: [
     GoRoute(
       path: '/',
-      builder: (context, state) => const TaskListScreen(),
+      builder: (context, state) => const PlatformAdaptiveShell(),
     ),
   ],
 );

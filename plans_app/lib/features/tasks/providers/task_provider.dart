@@ -18,14 +18,24 @@ class TaskToggled extends UndoAction {
 }
 
 final undoStackProvider =
-    StateNotifierProvider<UndoStackNotifier, List<UndoAction>>(
-  (ref) => UndoStackNotifier(),
+    NotifierProvider<UndoStackNotifier, List<UndoAction>>(
+  UndoStackNotifier.new,
 );
 
-final lastUndoActionProvider = StateProvider<UndoAction?>((ref) => null);
+class _LastUndoActionNotifier extends Notifier<UndoAction?> {
+  @override
+  UndoAction? build() => null;
+  void set(UndoAction? action) => state = action;
+}
 
-class UndoStackNotifier extends StateNotifier<List<UndoAction>> {
-  UndoStackNotifier() : super([]);
+final lastUndoActionProvider =
+    NotifierProvider<_LastUndoActionNotifier, UndoAction?>(
+  _LastUndoActionNotifier.new,
+);
+
+class UndoStackNotifier extends Notifier<List<UndoAction>> {
+  @override
+  List<UndoAction> build() => [];
 
   void push(UndoAction action) => state = [...state, action];
 
@@ -38,14 +48,27 @@ class UndoStackNotifier extends StateNotifier<List<UndoAction>> {
 }
 
 final tasksProvider =
-    StateNotifierProvider<TasksNotifier, List<Task>>((ref) {
-  final db = ref.read(databaseServiceProvider);
-  return TasksNotifier(db);
-});
+    NotifierProvider<TasksNotifier, List<Task>>(TasksNotifier.new);
 
-final searchQueryProvider = StateProvider<String>((ref) => '');
-final composerFocusRequestProvider = StateProvider<int>((ref) => 0);
-final searchFocusRequestProvider = StateProvider<int>((ref) => 0);
+class _StringNotifier extends Notifier<String> {
+  @override
+  String build() => '';
+  void set(String value) => state = value;
+}
+
+final searchQueryProvider =
+    NotifierProvider<_StringNotifier, String>(_StringNotifier.new);
+
+class _CounterNotifier extends Notifier<int> {
+  @override
+  int build() => 0;
+  void request() => state++;
+}
+
+final composerFocusRequestProvider =
+    NotifierProvider<_CounterNotifier, int>(_CounterNotifier.new);
+final searchFocusRequestProvider =
+    NotifierProvider<_CounterNotifier, int>(_CounterNotifier.new);
 
 final todayCountProvider = Provider<int>((ref) {
   final tasks = ref.watch(tasksProvider);
@@ -81,7 +104,7 @@ final projectTaskCountProvider = Provider.family<int, String>((ref, projectId) {
 
 final filteredTasksProvider = Provider<List<Task>>((ref) {
   final tasks = ref.watch(tasksProvider);
-  final selection = ref.watch(sidebarSelectionProvider);
+  final SidebarSelection selection = ref.watch(sidebarSelectionProvider);
   final query = ref.watch(searchQueryProvider).toLowerCase().trim();
 
   var filtered = switch (selection) {
@@ -112,10 +135,14 @@ final filteredTasksProvider = Provider<List<Task>>((ref) {
   return filtered;
 });
 
-class TasksNotifier extends StateNotifier<List<Task>> {
-  final DatabaseService _db;
-  TasksNotifier(this._db) : super([]) {
+class TasksNotifier extends Notifier<List<Task>> {
+  late final DatabaseService _db;
+
+  @override
+  List<Task> build() {
+    _db = ref.read(databaseServiceProvider);
     _load();
+    return [];
   }
 
   void _load() {

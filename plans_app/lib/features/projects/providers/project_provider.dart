@@ -20,18 +20,27 @@ class ProjectSelection extends SidebarSelection {
 enum ViewType { inbox, today, completed }
 
 final projectsProvider =
-    StateNotifierProvider<ProjectsNotifier, List<Project>>((ref) {
-  final db = ref.read(databaseServiceProvider);
-  return ProjectsNotifier(db);
-});
+    NotifierProvider<ProjectsNotifier, List<Project>>(ProjectsNotifier.new);
+
+class SidebarSelectionNotifier extends Notifier<SidebarSelection> {
+  @override
+  SidebarSelection build() => const ViewSelection(ViewType.inbox);
+  void select(SidebarSelection selection) => state = selection;
+}
 
 final sidebarSelectionProvider =
-    StateProvider<SidebarSelection>((ref) => const ViewSelection(ViewType.inbox));
+    NotifierProvider<SidebarSelectionNotifier, SidebarSelection>(
+  SidebarSelectionNotifier.new,
+);
 
-class ProjectsNotifier extends StateNotifier<List<Project>> {
-  final DatabaseService _db;
-  ProjectsNotifier(this._db) : super([]) {
+class ProjectsNotifier extends Notifier<List<Project>> {
+  late final DatabaseService _db;
+
+  @override
+  List<Project> build() {
+    _db = ref.read(databaseServiceProvider);
     _load();
+    return [];
   }
 
   void _load() {
@@ -47,7 +56,11 @@ class ProjectsNotifier extends StateNotifier<List<Project>> {
     state = [...state, project];
   }
 
-  Future<void> updateProject(String id, {required String name, required int colorIndex}) async {
+  Future<void> updateProject(
+    String id, {
+    required String name,
+    required int colorIndex,
+  }) async {
     final idx = state.indexWhere((p) => p.id == id);
     if (idx < 0) return;
     final updated = state[idx].copyWith(name: name, colorIndex: colorIndex);

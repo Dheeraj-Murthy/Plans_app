@@ -50,7 +50,7 @@ class SlimSidebar extends ConsumerWidget {
                 selection.view == ViewType.inbox,
             onTap: () => ref
                 .read(sidebarSelectionProvider.notifier)
-                .state = const ViewSelection(ViewType.inbox),
+                .select(const ViewSelection(ViewType.inbox)),
           ),
           SidebarItem(
             icon: Icons.calendar_today_rounded,
@@ -60,7 +60,7 @@ class SlimSidebar extends ConsumerWidget {
                 selection.view == ViewType.today,
             onTap: () => ref
                 .read(sidebarSelectionProvider.notifier)
-                .state = const ViewSelection(ViewType.today),
+                .select(const ViewSelection(ViewType.today)),
           ),
           SidebarItem(
             icon: Icons.check_circle_outline_rounded,
@@ -70,7 +70,7 @@ class SlimSidebar extends ConsumerWidget {
                 selection.view == ViewType.completed,
             onTap: () => ref
                 .read(sidebarSelectionProvider.notifier)
-                .state = const ViewSelection(ViewType.completed),
+                .select(const ViewSelection(ViewType.completed)),
           ),
 
           // Projects section
@@ -93,7 +93,7 @@ class SlimSidebar extends ConsumerWidget {
                       selection.projectId == project.id,
                   onTap: () => ref
                       .read(sidebarSelectionProvider.notifier)
-                      .state = ProjectSelection(project.id),
+                      .select(ProjectSelection(project.id)),
                 );
               },
             ),

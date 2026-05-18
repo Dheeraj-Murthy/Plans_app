@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,11 +14,15 @@ import 'shared/notifications/notification_service.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await RustLib.init(
-    externalLibrary: ExternalLibrary.open(
-      '@rpath/plans_core.framework/plans_core',
-    ),
-  );
+  if (!kIsWeb && Platform.isMacOS) {
+    await RustLib.init(
+      externalLibrary: ExternalLibrary.open(
+        '@rpath/plans_core.framework/plans_core',
+      ),
+    );
+  } else if (!kIsWeb) {
+    await RustLib.init();
+  }
 
   final dir = await getApplicationDocumentsDirectory();
   await rust_api.initDatabase(path: '${dir.path}/plans.db');

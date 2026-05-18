@@ -143,7 +143,9 @@ Future<DateTime?> pickDate(BuildContext context, DateTime? current) async {
     initialTime: initialTime,
     initialEntryMode: TimePickerEntryMode.input,
   );
-  if (time == null) return date;
+  if (time == null) {
+    return DateTime(date.year, date.month, date.day, 9, 0);
+  }
   return DateTime(date.year, date.month, date.day, time.hour, time.minute);
 }
 

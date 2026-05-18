@@ -118,7 +118,9 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
             ],
           ),
           const SizedBox(height: AppSpacing.md),
-          Row(
+          Wrap(
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.sm,
             children: [
               AppChip(
                 key: _priorityKey,
@@ -133,7 +135,6 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
                         : null,
                 onTap: _showPriorityMenu,
               ),
-              const SizedBox(width: AppSpacing.sm),
               AppChip(
                 icon: Icons.calendar_today_outlined,
                 label: _dueDate != null
@@ -141,7 +142,6 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
                     : 'Due date',
                 onTap: _pickDate,
               ),
-              const SizedBox(width: AppSpacing.sm),
               AppChip(
                 key: _reminderKey,
                 icon: Icons.notifications_outlined,
@@ -149,7 +149,6 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
                 color: _reminderMinutes != null ? AppColors.accent : null,
                 onTap: _showReminderMenu,
               ),
-              const SizedBox(width: AppSpacing.sm),
               AppChip(
                 key: _projectKey,
                 icon: Icons.folder_outlined,
@@ -158,7 +157,12 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
                     .name,
                 onTap: _showProjectMenu,
               ),
-              const Spacer(),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
               if (_isEditing)
                 GestureDetector(
                   onTap: () {
