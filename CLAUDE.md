@@ -10,6 +10,12 @@ All Flutter commands run from `plans_app/`.
 
 ## Commands
 
+**After fresh clone**: run FRB codegen first, then `flutter pub get`:
+```bash
+cd plans_app
+flutter_rust_bridge_codegen generate   # regenerates lib/src/rust/ and rust/src/frb_generated.rs
+```
+
 ```bash
 cd plans_app
 

@@ -28,3 +28,15 @@ docs/
 *.env
 *.key
 credentials.*
+
+# FRB generated Dart bindings
+plans_app/lib/src/rust/
+
+# FRB generated Rust binding
+plans_app/rust/src/frb_generated.rs
+
+# Flutter platform plugin registrants (linux/windows)
+plans_app/linux/flutter/generated_plugin_registrant.*
+plans_app/linux/flutter/generated_plugins.cmake
+plans_app/windows/flutter/generated_plugin_registrant.*
+plans_app/windows/flutter/generated_plugins.cmake
