@@ -71,28 +71,33 @@ class _TaskTileState extends ConsumerState<TaskTile> {
       },
       pageBuilder: (context, animation, secondaryAnimation) {
         final screenWidth = MediaQuery.of(context).size.width;
-        return Material(
-          color: Colors.transparent,
-          child: Stack(
-            children: [
-              Positioned(
-                top: screenHeight * 0.2,
-                bottom: screenHeight * 0.2,
-                left: screenWidth * 0.2,
-                right: screenWidth * 0.2,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: AddTaskSheet(existingTask: widget.task),
+        final isMobile = screenWidth < 600;
+        final margin = isMobile ? 0.05 : 0.2;
+        return GestureDetector(
+          onTap: () => Navigator.of(context).pop(),
+          child: Material(
+            color: Colors.transparent,
+            child: Stack(
+              children: [
+                Positioned(
+                  top: screenHeight * 0.2,
+                  bottom: screenHeight * 0.2,
+                  left: screenWidth * margin,
+                  right: screenWidth * margin,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: AddTaskSheet(existingTask: widget.task),
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         );
       },

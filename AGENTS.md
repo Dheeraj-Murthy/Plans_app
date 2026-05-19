@@ -16,6 +16,8 @@ flutter analyze             # lint — must stay at 0 issues
 flutter test                # all tests
 flutter test test/widget_test.dart   # single test file
 flutter run -d macos        # run on macOS
+flutter run -d <android-device>
+flutter run -d <ios-device>
 flutter build macos --debug
 flutter build web --release
 
@@ -23,6 +25,8 @@ flutter build web --release
 ```
 
 **Rust rebuild**: `bash rust/build_macos.sh` (produces `rust/target/release/plans_core.framework`). Run before `flutter run` if Rust code changed.
+**Rust Android**: `bash rust/build_android.sh` — requires `cargo-ndk` + Android NDK. Produces `.so` in `android/app/src/main/jniLibs/`.
+**Rust iOS**: `bash rust/build_ios.sh` — produces `plans_core.xcframework`. Requires Xcode.
 **Rust quick check**: `cargo check --manifest-path rust/Cargo.toml` — fast compile-only validation.
 **FRB codegen**: run `flutter_rust_bridge` codegen when Rust `api/` types change.
 
@@ -46,6 +50,11 @@ flutter build web --release
 - **Default projects** seeded on DB creation in `rust/src/db.rs`: `'default'` (Inbox), `'work'`, `'personal'`, `'ideas'`. `Task.projectId` defaults to `'default'`.
 - **Fonts**: Inter `.ttf` bundled in `fonts/` (4 weights). **Do NOT use `google_fonts`** — macOS sandbox blocks HTTP downloads.
 - **Dark theme only**: `themeMode: ThemeMode.dark`, hardcoded. Palette — bg `#151618`, surface `#1B1D21`, elevated `#23262B`, accent `#7C6DF2`.
-- **SDK**: Dart `^3.11.5`. Key deps: `flutter_riverpod`, `go_router`, `flutter_rust_bridge 2.12.0`, `flutter_local_notifications`, `timezone`.
+- **SDK**: Dart `^3.11.5`. Key deps: `flutter_riverpod 3.x`, `go_router 17.x`, `flutter_rust_bridge 2.12.0`, `flutter_local_notifications 21.x`, `alarm 5.x`, `timezone`, `flutter_timezone`.
 - **Feature layout**: `lib/features/tasks/` and `lib/features/projects/` each own models, providers, widgets, screens. `lib/shared/` has cross-cutting widgets, helpers, database, notifications.
+- **NLP parser**: `lib/shared/helpers/task_parser.dart` — pure Dart, no deps. Extracts priority (`p1`/`!high`), project (`@name`), date/time from raw text on submit. Supports absolute times (`tomorrow at 7`, `friday at 3pm`, `at 3.27`), relative times (`in 5 min`, `in 2 hours`, `in a minute`, `in an hour`), and date keywords (`in 3 days`, `next monday`). "Next occurrence" logic for ambiguous times. Default AM for non-today dates. Integrated in `StickyComposer` + `AddTaskSheet._submit()`. 68 unit tests in `test/shared/helpers/task_parser_test.dart`.
+- **Syntax highlighting**: `lib/shared/helpers/task_highlighter.dart` + `lib/shared/widgets/highlighted_task_controller.dart`. Overrides `TextEditingController.buildTextSpan` to color tokens with pill-like backgrounds: priority (red), project (purple), date (green), time (blue). Auto-integrated in `StickyComposer` and `AddTaskSheet` via `HighlightedTaskController`.
+- **Cross-platform**: `lib/shell/platform_shell.dart` detects platform → `_DesktopShell` (sidebar + task list) or `_MobileShell` (bottom nav + drawer + FAB). `lib/routing/app_router.dart` routes `/` to `PlatformAdaptiveShell`.
+- **Notifications**: macOS uses `flutter_local_notifications` (zonedSchedule). Android/iOS use `alarm` package for scheduling + `flutter_local_notifications` for display. `NotificationService` in `lib/shared/notifications/`.
+- **Keyboard shortcuts**: macOS only (Cmd+N, Cmd+K, Cmd+1/2/3, Cmd+Z). Handled in `PlatformAdaptiveShell` `initState`.
 - **macOS sandbox**: Rust framework loaded at `@rpath/plans_core.framework/plans_core`. `flutter build macos --debug` may fail due to Xcode deployment target conflict (not a code issue).

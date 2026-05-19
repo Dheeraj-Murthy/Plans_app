@@ -204,7 +204,7 @@ class _MobileShell extends ConsumerWidget {
         onPressed: () => showModalBottomSheet<void>(
           context: context,
           isScrollControlled: true,
-          backgroundColor: Colors.transparent,
+          backgroundColor: AppColors.surface,
           builder: (_) => const AddTaskSheet(),
         ),
         child: const Icon(Icons.add_rounded),

@@ -9,6 +9,8 @@ import '../../../theme/app_theme.dart';
 import '../../../theme/app_typography.dart';
 import '../../../shared/widgets/app_chip.dart';
 import '../../../shared/helpers/task_helpers.dart';
+import '../../../shared/helpers/task_parser.dart';
+import '../../../shared/widgets/highlighted_task_controller.dart';
 
 class AddTaskSheet extends ConsumerStatefulWidget {
   final Task? existingTask;
@@ -34,7 +36,7 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
   void initState() {
     super.initState();
     final task = widget.existingTask;
-    _titleController = TextEditingController(text: task?.title ?? '');
+    _titleController = HighlightedTaskController(text: task?.title ?? '');
     _descriptionController =
         TextEditingController(text: task?.description ?? '');
     _dueDate = task?.dueDate;
@@ -118,52 +120,55 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
             ],
           ),
           const SizedBox(height: AppSpacing.md),
-          Wrap(
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.sm,
-            children: [
-              AppChip(
-                key: _priorityKey,
-                icon: Icons.flag_outlined,
-                label: _priority == TaskPriority.none
-                    ? 'Priority'
-                    : _priority.name,
-                color: _priority == TaskPriority.high
-                    ? AppColors.priorityHigh
-                    : _priority == TaskPriority.medium
-                        ? AppColors.priorityMedium
-                        : null,
-                onTap: _showPriorityMenu,
-              ),
-              AppChip(
-                icon: Icons.calendar_today_outlined,
-                label: _dueDate != null
-                    ? formatDueDateTime(_dueDate!)
-                    : 'Due date',
-                onTap: _pickDate,
-              ),
-              AppChip(
-                key: _reminderKey,
-                icon: Icons.notifications_outlined,
-                label: _reminderLabel,
-                color: _reminderMinutes != null ? AppColors.accent : null,
-                onTap: _showReminderMenu,
-              ),
-              AppChip(
-                key: _projectKey,
-                icon: Icons.folder_outlined,
-                label: projects
-                    .firstWhere((p) => p.id == currentProjectId)
-                    .name,
-                onTap: _showProjectMenu,
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.sm),
           Row(
-            mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              if (_isEditing)
+              Expanded(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    spacing: AppSpacing.sm,
+                    children: [
+                      AppChip(
+                        key: _priorityKey,
+                        icon: Icons.flag_outlined,
+                        label: _priority == TaskPriority.none
+                            ? 'Priority'
+                            : _priority.name,
+                        color: _priority == TaskPriority.high
+                            ? AppColors.priorityHigh
+                            : _priority == TaskPriority.medium
+                                ? AppColors.priorityMedium
+                                : null,
+                        onTap: _showPriorityMenu,
+                      ),
+                      AppChip(
+                        icon: Icons.calendar_today_outlined,
+                        label: _dueDate != null
+                            ? formatDueDateTime(_dueDate!)
+                            : 'Due date',
+                        onTap: _pickDate,
+                      ),
+                      AppChip(
+                        key: _reminderKey,
+                        icon: Icons.notifications_outlined,
+                        label: _reminderLabel,
+                        color: _reminderMinutes != null ? AppColors.accent : null,
+                        onTap: _showReminderMenu,
+                      ),
+                      AppChip(
+                        key: _projectKey,
+                        icon: Icons.folder_outlined,
+                        label: projects
+                            .firstWhere((p) => p.id == currentProjectId)
+                            .name,
+                        onTap: _showProjectMenu,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              if (_isEditing) ...[
+                const SizedBox(width: AppSpacing.sm),
                 GestureDetector(
                   onTap: () {
                     ref
@@ -185,7 +190,8 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
                     ),
                   ),
                 ),
-              if (_isEditing) const SizedBox(width: AppSpacing.sm),
+              ],
+              const SizedBox(width: AppSpacing.sm),
               GestureDetector(
                 onTap: _submit,
                 child: AnimatedContainer(
@@ -327,14 +333,22 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
   }
 
   void _submit() {
-    final title = _titleController.text.trim();
-    if (title.isEmpty) return;
+    final raw = _titleController.text.trim();
+    if (raw.isEmpty) return;
     final desc = _descriptionController.text.trim();
-
     final projects = ref.read(projectsProvider);
-    final projectId = projects.isNotEmpty
-        ? projects[_localProjectIndex % projects.length].id
-        : 'default';
+
+    final parsed = TaskParser.parse(raw, projects);
+    final effectiveTitle = parsed.title.isNotEmpty ? parsed.title : raw;
+    final effectiveProjectId = parsed.projectId ??
+        (projects.isNotEmpty
+            ? projects[_localProjectIndex % projects.length].id
+            : 'default');
+    final effectiveDueDate = parsed.dueDate ?? _dueDate;
+    final effectivePriority = parsed.priority ?? _priority;
+    final effectiveReminder = parsed.hasDueDate && _reminderMinutes == null
+        ? parsed.defaultReminderMinutes
+        : _reminderMinutes;
 
     final notifier = ref.read(tasksProvider.notifier);
 
@@ -342,22 +356,22 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
       notifier.updateTask(
         widget.existingTask!.id,
         widget.existingTask!.copyWith(
-          title: title,
+          title: effectiveTitle,
           description: desc.isNotEmpty ? desc : null,
-          dueDate: _dueDate,
-          priority: _priority,
-          projectId: projectId,
-          reminderMinutes: _reminderMinutes,
+          dueDate: effectiveDueDate,
+          priority: effectivePriority,
+          projectId: effectiveProjectId,
+          reminderMinutes: effectiveReminder,
         ),
       );
     } else {
       notifier.addTask(
-        title: title,
+        title: effectiveTitle,
         description: desc.isNotEmpty ? desc : null,
-        dueDate: _dueDate,
-        priority: _priority,
-        projectId: projectId,
-        reminderMinutes: _reminderMinutes,
+        dueDate: effectiveDueDate,
+        priority: effectivePriority,
+        projectId: effectiveProjectId,
+        reminderMinutes: effectiveReminder,
       );
     }
 

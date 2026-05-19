@@ -10,6 +10,8 @@ import '../../../features/tasks/providers/task_provider.dart';
 import '../../../features/projects/providers/project_provider.dart';
 import '../app_chip.dart';
 import '../../helpers/task_helpers.dart';
+import '../../helpers/task_parser.dart';
+import '../highlighted_task_controller.dart';
 
 class StickyComposer extends ConsumerStatefulWidget {
   const StickyComposer({super.key});
@@ -19,7 +21,7 @@ class StickyComposer extends ConsumerStatefulWidget {
 }
 
 class _StickyComposerState extends ConsumerState<StickyComposer> {
-  final _titleController = TextEditingController();
+  final _titleController = HighlightedTaskController();
   final _descriptionController = TextEditingController();
   late final FocusNode _focusNode;
   final _priorityKey = GlobalKey();
@@ -95,20 +97,30 @@ class _StickyComposerState extends ConsumerState<StickyComposer> {
   }
 
   void _submit() {
-    final text = _titleController.text.trim();
-    if (text.isEmpty) return;
+    final raw = _titleController.text.trim();
+    if (raw.isEmpty) return;
     final desc = _descriptionController.text.trim();
     final projects = ref.read(projectsProvider);
-    final projectId = projects.isNotEmpty
-        ? projects[_localProjectIndex % projects.length].id
-        : 'default';
+
+    final parsed = TaskParser.parse(raw, projects);
+    final effectiveTitle = parsed.title.isNotEmpty ? parsed.title : raw;
+    final effectivePriority = parsed.priority ?? _priority;
+    final effectiveProjectId = parsed.projectId ??
+        (projects.isNotEmpty
+            ? projects[_localProjectIndex % projects.length].id
+            : 'default');
+    final effectiveDueDate = parsed.dueDate ?? _dueDate;
+    final effectiveReminder = parsed.hasDueDate && _reminderMinutes == null
+        ? parsed.defaultReminderMinutes
+        : _reminderMinutes;
+
     ref.read(tasksProvider.notifier).addTask(
-          title: text,
+          title: effectiveTitle,
           description: desc.isNotEmpty ? desc : null,
-          dueDate: _dueDate,
-          priority: _priority,
-          projectId: projectId,
-          reminderMinutes: _reminderMinutes,
+          dueDate: effectiveDueDate,
+          priority: effectivePriority,
+          projectId: effectiveProjectId,
+          reminderMinutes: effectiveReminder,
         );
     _titleController.clear();
     _descriptionController.clear();
