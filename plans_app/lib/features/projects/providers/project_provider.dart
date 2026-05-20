@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/project.dart';
 import '../../../shared/database/database_service.dart';
+import '../../../shared/widgets/widget_bridge.dart';
 
 sealed class SidebarSelection {
   const SidebarSelection();
@@ -46,6 +47,7 @@ class ProjectsNotifier extends Notifier<List<Project>> {
   void _load() {
     _db.getProjects().then((projects) {
       state = projects;
+      WidgetBridge.notifyUpdate(allProjects: projects);
     }).catchError((e) {
       debugPrint('ProjectsNotifier._load failed: $e');
     });
@@ -54,6 +56,7 @@ class ProjectsNotifier extends Notifier<List<Project>> {
   Future<void> addProject(String name, {required int colorIndex}) async {
     final project = await _db.insertProject(name: name, colorIndex: colorIndex);
     state = [...state, project];
+    WidgetBridge.notifyUpdate(allProjects: state);
   }
 
   Future<void> updateProject(
@@ -68,10 +71,12 @@ class ProjectsNotifier extends Notifier<List<Project>> {
     final list = [...state];
     list[idx] = updated;
     state = list;
+    WidgetBridge.notifyUpdate(allProjects: state);
   }
 
   Future<void> deleteProject(String id) async {
     await _db.deleteProject(id);
     state = state.where((p) => p.id != id).toList();
+    WidgetBridge.notifyUpdate(allProjects: state);
   }
 }

@@ -1,8 +1,10 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/task.dart';
 import '../../projects/providers/project_provider.dart';
 import '../../../shared/database/database_service.dart';
 import '../../../shared/notifications/notification_service.dart';
+import '../../../shared/widgets/widget_bridge.dart';
 
 sealed class UndoAction {}
 
@@ -149,6 +151,9 @@ class TasksNotifier extends Notifier<List<Task>> {
     _db.getTasks().then((tasks) {
       state = tasks;
       NotificationService.rescheduleAll(tasks);
+      WidgetBridge.notifyUpdate(allTasks: state);
+    }).catchError((e, st) {
+      debugPrint('TasksNotifier._load failed: $e\n$st');
     });
   }
 
@@ -170,6 +175,7 @@ class TasksNotifier extends Notifier<List<Task>> {
     );
     state = [...state, task];
     NotificationService.scheduleForTask(task);
+    WidgetBridge.notifyUpdate(allTasks: state);
   }
 
   bool toggleTask(String id) {
@@ -186,6 +192,7 @@ class TasksNotifier extends Notifier<List<Task>> {
       }
       return toggled;
     }).toList();
+    WidgetBridge.notifyUpdate(allTasks: state);
     return wasCompleted;
   }
 
@@ -194,6 +201,7 @@ class TasksNotifier extends Notifier<List<Task>> {
     state = state.where((t) => t.id != id).toList();
     _db.deleteTask(id);
     NotificationService.cancelForTask(id);
+    WidgetBridge.notifyUpdate(allTasks: state);
     return task;
   }
 
@@ -201,6 +209,7 @@ class TasksNotifier extends Notifier<List<Task>> {
     await _db.restoreTask(task.id);
     state = [...state, task];
     NotificationService.scheduleForTask(task);
+    WidgetBridge.notifyUpdate(allTasks: state);
   }
 
   Future<void> clearCompleted() async {
@@ -208,6 +217,7 @@ class TasksNotifier extends Notifier<List<Task>> {
     if (completed.isEmpty) return;
     state = state.where((t) => !t.isCompleted).toList();
     await _db.clearCompleted();
+    WidgetBridge.notifyUpdate(allTasks: state);
   }
 
   void updateTask(String id, Task updated) {
@@ -217,6 +227,7 @@ class TasksNotifier extends Notifier<List<Task>> {
       NotificationService.scheduleForTask(updated);
       return updated;
     }).toList();
+    WidgetBridge.notifyUpdate(allTasks: state);
   }
 
   void reorderTask(int oldIndex, int newIndex) {
@@ -225,5 +236,6 @@ class TasksNotifier extends Notifier<List<Task>> {
     tasks.insert(newIndex, moved);
     state = tasks;
     _db.reorderTasks(tasks.map((t) => t.id).toList());
+    WidgetBridge.notifyUpdate(allTasks: state);
   }
 }

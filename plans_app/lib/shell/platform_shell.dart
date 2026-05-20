@@ -16,6 +16,7 @@ import '../shared/notifications/notification_service.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_typography.dart';
+import '../main.dart' show widgetIntentProvider;
 
 class PlatformAdaptiveShell extends ConsumerStatefulWidget {
   const PlatformAdaptiveShell({super.key});
@@ -27,12 +28,42 @@ class PlatformAdaptiveShell extends ConsumerStatefulWidget {
 
 class _PlatformAdaptiveShellState
     extends ConsumerState<PlatformAdaptiveShell> {
+  static const _deeplinkChannel = MethodChannel('plans/widget/deeplink');
+
   @override
   void initState() {
     super.initState();
     if (!kIsWeb && Platform.isMacOS) {
       HardwareKeyboard.instance.addHandler(_handleKeyEvent);
     }
+    if (!kIsWeb && Platform.isAndroid) {
+      _deeplinkChannel.setMethodCallHandler(_handleNativeCall);
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final intent = ref.read(widgetIntentProvider);
+      if (intent == 'add_task') {
+        _openAddTask();
+      }
+    });
+  }
+
+  Future<dynamic> _handleNativeCall(MethodCall call) async {
+    if (call.method == 'openAddTask') {
+      _openAddTask();
+    }
+  }
+
+  void _openAddTask() {
+    if (!Platform.isAndroid) {
+      ref.read(composerFocusRequestProvider.notifier).request();
+      return;
+    }
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surface,
+      builder: (_) => const AddTaskSheet(),
+    );
   }
 
   @override

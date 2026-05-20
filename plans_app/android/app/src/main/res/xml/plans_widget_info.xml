@@ -7,5 +7,5 @@
     android:resizeMode="vertical|horizontal"
     android:widgetCategory="home_screen"
     android:updatePeriodMillis="0"
-    android:initialLayout="@layout/glance_default_loading_layout">
+    android:initialLayout="@layout/widget_task_list">
 </appwidget-provider>

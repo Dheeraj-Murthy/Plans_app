@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#1B1D21"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <TextView
+        android:id="@+id/tv_picker_header"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Select view"
+        android:textColor="#E0E0E0"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:paddingBottom="12dp" />
+
+    <TextView
+        android:id="@+id/tv_option_1"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="#E0E0E0"
+        android:textSize="13sp"
+        android:paddingVertical="6dp"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/tv_option_2"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="#E0E0E0"
+        android:textSize="13sp"
+        android:paddingVertical="6dp"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/tv_option_3"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="#E0E0E0"
+        android:textSize="13sp"
+        android:paddingVertical="6dp"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/tv_option_4"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="#E0E0E0"
+        android:textSize="13sp"
+        android:paddingVertical="6dp"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/tv_option_5"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="#E0E0E0"
+        android:textSize="13sp"
+        android:paddingVertical="6dp"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/tv_option_6"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="#E0E0E0"
+        android:textSize="13sp"
+        android:paddingVertical="6dp"
+        android:visibility="gone" />
+
+</LinearLayout>
