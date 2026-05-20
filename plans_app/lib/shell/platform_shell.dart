@@ -12,7 +12,6 @@ import '../shared/widgets/sidebar/sidebar_item.dart';
 import '../shared/widgets/sidebar/sidebar_section_header.dart';
 import '../shared/widgets/sidebar/add_project_button.dart';
 import '../shared/helpers/task_helpers.dart';
-import '../shared/notifications/notification_service.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_typography.dart';
@@ -172,8 +171,8 @@ class _MobileShell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final SidebarSelection selection = ref.watch(sidebarSelectionProvider);
     final projects = ref.watch(projectsProvider);
-    final completed =
-        ref.watch(filteredTasksProvider).where((t) => t.isCompleted).toList();
+    // final completed =
+    //     ref.watch(filteredTasksProvider).where((t) => t.isCompleted).toList();
 
     final title = switch (selection) {
       ViewSelection(:final view) => switch (view) {
@@ -207,24 +206,24 @@ class _MobileShell extends ConsumerWidget {
           ),
         ),
         actions: [
-          // TODO: remove test button
-          IconButton(
-            icon: const Icon(Icons.notifications_active_outlined,
-                color: AppColors.accent),
-            tooltip: 'Test notification',
-            onPressed: () => NotificationService.showTestNotification(),
-          ),
-          if (completed.isNotEmpty)
-            TextButton(
-              onPressed: () =>
-                  ref.read(tasksProvider.notifier).clearCompleted(),
-              child: Text(
-                'Clear',
-                style: AppTypography.bodySmall.copyWith(
-                  color: AppColors.textMuted,
-                ),
-              ),
-            ),
+          // // TODO: remove test button
+          // IconButton(
+          //   icon: const Icon(Icons.notifications_active_outlined,
+          //       color: AppColors.accent),
+          //   tooltip: 'Test notification',
+          //   onPressed: () => NotificationService.showTestNotification(),
+          // ),
+          // if (completed.isNotEmpty)
+          //   TextButton(
+          //     onPressed: () =>
+          //         ref.read(tasksProvider.notifier).clearCompleted(),
+          //     child: Text(
+          //       'Clear',
+          //       style: AppTypography.bodySmall.copyWith(
+          //         color: AppColors.textMuted,
+          //       ),
+          //     ),
+          //   ),
         ],
       ),
       drawer: _MobileDrawer(),

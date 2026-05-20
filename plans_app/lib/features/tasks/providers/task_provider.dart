@@ -212,13 +212,13 @@ class TasksNotifier extends Notifier<List<Task>> {
     WidgetBridge.notifyUpdate(allTasks: state);
   }
 
-  Future<void> clearCompleted() async {
-    final completed = state.where((t) => t.isCompleted).toList();
-    if (completed.isEmpty) return;
-    state = state.where((t) => !t.isCompleted).toList();
-    await _db.clearCompleted();
-    WidgetBridge.notifyUpdate(allTasks: state);
-  }
+  // Future<void> clearCompleted() async {
+  //   final completed = state.where((t) => t.isCompleted).toList();
+  //   if (completed.isEmpty) return;
+  //   state = state.where((t) => !t.isCompleted).toList();
+  //   await _db.clearCompleted();
+  //   WidgetBridge.notifyUpdate(allTasks: state);
+  // }
 
   void updateTask(String id, Task updated) {
     state = state.map((t) {

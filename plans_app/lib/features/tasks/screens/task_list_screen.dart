@@ -139,18 +139,18 @@ class TaskListScreen extends ConsumerWidget {
                   ),
                 ),
               ),
-              if (completed.isNotEmpty)
-                GestureDetector(
-                  onTap: () {
-                    ref.read(tasksProvider.notifier).clearCompleted();
-                  },
-                  child: Text(
-                    'Clear completed',
-                    style: AppTypography.bodySmall.copyWith(
-                      color: AppColors.textMuted,
-                    ),
-                  ),
-                ),
+              // if (completed.isNotEmpty)
+              //   GestureDetector(
+              //     onTap: () {
+              //       ref.read(tasksProvider.notifier).clearCompleted();
+              //     },
+              //     child: Text(
+              //       'Clear completed',
+              //       style: AppTypography.bodySmall.copyWith(
+              //         color: AppColors.textMuted,
+              //       ),
+              //     ),
+              //   ),
             ],
           ),
         ),

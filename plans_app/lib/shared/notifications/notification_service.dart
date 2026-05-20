@@ -195,47 +195,45 @@ class NotificationService {
     }
   }
 
-  static Future<void> showTestNotification() async {
-    if (!_initialized) {
-      debugPrint('NotificationService: showTestNotification — not initialized');
-      return;
-    }
-    try {
-      // Instant notification via show()
-      await _fln.show(
-        id: 999998,
-        title: 'Plans — instant test',
-        body: 'show() works (no AlarmManager)',
-        notificationDetails: const NotificationDetails(
-          macOS: DarwinNotificationDetails(
-            presentAlert: true,
-            presentSound: true,
-          ),
-          android: AndroidNotificationDetails(
-            'plans_reminders',
-            'Task Reminders',
-            importance: Importance.high,
-            priority: Priority.high,
-            icon: '@drawable/ic_stat_notification',
-          ),
-        ),
-      );
-      debugPrint('NotificationService: instant test sent');
-
-      // Scheduled test via alarm package — fires in 10 seconds
-      final fireAt =
-          DateTime.now().add(const Duration(seconds: 10));
-      await _scheduleNotification(
-        id: 999999,
-        title: 'Plans — alarm test',
-        body: 'Alarm-based notification fired!',
-        at: fireAt,
-      );
-      debugPrint('NotificationService: alarm test scheduled for $fireAt');
-    } catch (e, st) {
-      debugPrint('NotificationService.showTestNotification failed: $e\n$st');
-    }
-  }
+  // static Future<void> showTestNotification() async {
+  //   if (!_initialized) {
+  //     debugPrint('NotificationService: showTestNotification — not initialized');
+  //     return;
+  //   }
+  //   try {
+  //     await _fln.show(
+  //       id: 999998,
+  //       title: 'Plans — instant test',
+  //       body: 'show() works (no AlarmManager)',
+  //       notificationDetails: const NotificationDetails(
+  //         macOS: DarwinNotificationDetails(
+  //           presentAlert: true,
+  //           presentSound: true,
+  //         ),
+  //         android: AndroidNotificationDetails(
+  //           'plans_reminders',
+  //           'Task Reminders',
+  //           importance: Importance.high,
+  //           priority: Priority.high,
+  //           icon: '@drawable/ic_stat_notification',
+  //         ),
+  //       ),
+  //     );
+  //     debugPrint('NotificationService: instant test sent');
+  // 
+  //     final fireAt =
+  //         DateTime.now().add(const Duration(seconds: 10));
+  //     await _scheduleNotification(
+  //       id: 999999,
+  //       title: 'Plans — alarm test',
+  //       body: 'Alarm-based notification fired!',
+  //       at: fireAt,
+  //     );
+  //     debugPrint('NotificationService: alarm test scheduled for $fireAt');
+  //   } catch (e, st) {
+  //     debugPrint('NotificationService.showTestNotification failed: $e\n$st');
+  //   }
+  // }
 
   // ── Internal ─────────────────────────────────────────────────────────────
 
