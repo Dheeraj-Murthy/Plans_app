@@ -151,7 +151,7 @@ class TasksNotifier extends Notifier<List<Task>> {
     _db.getTasks().then((tasks) {
       state = tasks;
       NotificationService.rescheduleAll(tasks);
-      WidgetBridge.notifyUpdate(allTasks: state);
+      WidgetBridge.notifyUpdate(allTasks: state, allProjects: ref.read(projectsProvider));
     }).catchError((e, st) {
       debugPrint('TasksNotifier._load failed: $e\n$st');
     });

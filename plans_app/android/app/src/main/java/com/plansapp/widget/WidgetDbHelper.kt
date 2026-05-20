@@ -50,7 +50,6 @@ class WidgetDbHelper private constructor(context: Context) {
     private fun getWriteDb(): SQLiteDatabase {
         if (writeDb == null || !writeDb!!.isOpen) {
             writeDb = SQLiteDatabase.openDatabase(dbPath, null, SQLiteDatabase.OPEN_READWRITE)
-            writeDb!!.execSQL("PRAGMA busy_timeout = 3000")
         }
         return writeDb!!
     }

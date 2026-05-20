@@ -11,7 +11,8 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:gravity="center_vertical">
+        android:gravity="center_vertical"
+        android:paddingBottom="8dp">
 
         <TextView
             android:id="@+id/tv_header_title"
@@ -41,13 +42,14 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:paddingVertical="5dp"
+        android:background="@drawable/widget_row_bg"
+        android:paddingVertical="4dp"
         android:visibility="gone">
 
         <ImageView
             android:id="@+id/iv_check_1"
-            android:layout_width="22dp"
-            android:layout_height="22dp"
+            android:layout_width="18dp"
+            android:layout_height="18dp"
             android:scaleType="fitCenter" />
 
         <LinearLayout
@@ -62,7 +64,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:textColor="#E0E0E0"
-                android:textSize="13sp"
+                android:textSize="15sp"
                 android:maxLines="1" />
 
             <TextView
@@ -70,7 +72,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:textColor="#888888"
-                android:textSize="11sp"
+                android:textSize="12sp"
                 android:visibility="gone" />
         </LinearLayout>
     </LinearLayout>
@@ -81,13 +83,14 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:paddingVertical="5dp"
+        android:background="@drawable/widget_row_bg"
+        android:paddingVertical="4dp"
         android:visibility="gone">
 
         <ImageView
             android:id="@+id/iv_check_2"
-            android:layout_width="22dp"
-            android:layout_height="22dp"
+            android:layout_width="18dp"
+            android:layout_height="18dp"
             android:scaleType="fitCenter" />
 
         <LinearLayout
@@ -102,7 +105,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:textColor="#E0E0E0"
-                android:textSize="13sp"
+                android:textSize="15sp"
                 android:maxLines="1" />
 
             <TextView
@@ -110,7 +113,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:textColor="#888888"
-                android:textSize="11sp"
+                android:textSize="12sp"
                 android:visibility="gone" />
         </LinearLayout>
     </LinearLayout>
@@ -121,13 +124,14 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:paddingVertical="5dp"
+        android:background="@drawable/widget_row_bg"
+        android:paddingVertical="4dp"
         android:visibility="gone">
 
         <ImageView
             android:id="@+id/iv_check_3"
-            android:layout_width="22dp"
-            android:layout_height="22dp"
+            android:layout_width="18dp"
+            android:layout_height="18dp"
             android:scaleType="fitCenter" />
 
         <LinearLayout
@@ -142,7 +146,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:textColor="#E0E0E0"
-                android:textSize="13sp"
+                android:textSize="15sp"
                 android:maxLines="1" />
 
             <TextView
@@ -150,7 +154,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:textColor="#888888"
-                android:textSize="11sp"
+                android:textSize="12sp"
                 android:visibility="gone" />
         </LinearLayout>
     </LinearLayout>
@@ -161,13 +165,14 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:paddingVertical="5dp"
+        android:background="@drawable/widget_row_bg"
+        android:paddingVertical="4dp"
         android:visibility="gone">
 
         <ImageView
             android:id="@+id/iv_check_4"
-            android:layout_width="22dp"
-            android:layout_height="22dp"
+            android:layout_width="18dp"
+            android:layout_height="18dp"
             android:scaleType="fitCenter" />
 
         <LinearLayout
@@ -182,7 +187,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:textColor="#E0E0E0"
-                android:textSize="13sp"
+                android:textSize="15sp"
                 android:maxLines="1" />
 
             <TextView
@@ -190,7 +195,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:textColor="#888888"
-                android:textSize="11sp"
+                android:textSize="12sp"
                 android:visibility="gone" />
         </LinearLayout>
     </LinearLayout>
@@ -201,13 +206,14 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:paddingVertical="5dp"
+        android:background="@drawable/widget_row_bg"
+        android:paddingVertical="4dp"
         android:visibility="gone">
 
         <ImageView
             android:id="@+id/iv_check_5"
-            android:layout_width="22dp"
-            android:layout_height="22dp"
+            android:layout_width="18dp"
+            android:layout_height="18dp"
             android:scaleType="fitCenter" />
 
         <LinearLayout
@@ -222,7 +228,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:textColor="#E0E0E0"
-                android:textSize="13sp"
+                android:textSize="15sp"
                 android:maxLines="1" />
 
             <TextView
@@ -230,7 +236,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:textColor="#888888"
-                android:textSize="11sp"
+                android:textSize="12sp"
                 android:visibility="gone" />
         </LinearLayout>
     </LinearLayout>
@@ -241,13 +247,14 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:paddingVertical="5dp"
+        android:background="@drawable/widget_row_bg"
+        android:paddingVertical="4dp"
         android:visibility="gone">
 
         <ImageView
             android:id="@+id/iv_check_6"
-            android:layout_width="22dp"
-            android:layout_height="22dp"
+            android:layout_width="18dp"
+            android:layout_height="18dp"
             android:scaleType="fitCenter" />
 
         <LinearLayout
@@ -262,7 +269,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:textColor="#E0E0E0"
-                android:textSize="13sp"
+                android:textSize="15sp"
                 android:maxLines="1" />
 
             <TextView
@@ -270,7 +277,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:textColor="#888888"
-                android:textSize="11sp"
+                android:textSize="12sp"
                 android:visibility="gone" />
         </LinearLayout>
     </LinearLayout>

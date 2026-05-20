@@ -2,17 +2,18 @@ package com.plansapp.widget
 
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
-import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
-import android.net.Uri
+import android.os.Build
+import android.os.VibrationEffect
+import android.os.Vibrator
 import android.util.Log
 import android.widget.RemoteViews
-import es.antonborri.home_widget.HomeWidgetLaunchIntent
 import es.antonborri.home_widget.HomeWidgetProvider
 import com.plansapp.R
 import org.json.JSONArray
+import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -35,6 +36,18 @@ class PlansAppWidgetProvider : HomeWidgetProvider() {
     }
 
     companion object {
+        private fun hapticFeedback(context: Context) {
+            try {
+                val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+                if (vibrator.hasVibrator()) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        vibrator.vibrate(VibrationEffect.createOneShot(30, VibrationEffect.DEFAULT_AMPLITUDE))
+                    } else {
+                        vibrator.vibrate(30)
+                    }
+                }
+            } catch (_: Exception) {}
+        }
         private const val ACTION_TOGGLE = "com.plansapp.action.TOGGLE"
         private const val ACTION_SET_VIEW = "com.plansapp.action.SET_VIEW"
         private const val EXTRA_TASK_ID = "task_id"
@@ -92,15 +105,26 @@ class PlansAppWidgetProvider : HomeWidgetProvider() {
             )
             views.setOnClickPendingIntent(R.id.tv_header_title, headerPi)
 
-            val addLaunchIntent = HomeWidgetLaunchIntent.getActivity(
-                context,
-                com.plansapp.MainActivity::class.java,
-                Uri.parse("plans://addTask"),
+            val addIntent = Intent(context, com.plansapp.MainActivity::class.java).apply {
+                action = "es.antonborri.home_widget.action.LAUNCH"
+            }
+            val addPi = PendingIntent.getActivity(
+                context, widgetId * 100 + 1, addIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
             )
-            views.setOnClickPendingIntent(R.id.btn_add, addLaunchIntent)
+            views.setOnClickPendingIntent(R.id.btn_add, addPi)
 
             val tasksJson = widgetData.getString("widget_tasks_$view", "[]") ?: "[]"
-            val tasks = JSONArray(tasksJson)
+            val raw = JSONArray(tasksJson)
+            val tasks = JSONArray()
+            for (i in 0 until raw.length()) {
+                val el = raw.opt(i)
+                if (el is JSONObject) {
+                    tasks.put(el)
+                } else if (el is String) {
+                    try { tasks.put(JSONObject(el)) } catch (_: Exception) {}
+                }
+            }
             val taskCount = tasks.length()
             val visibleCount = minOf(taskCount, MAX_VISIBLE_TASKS)
 
@@ -110,6 +134,10 @@ class PlansAppWidgetProvider : HomeWidgetProvider() {
                 val checkId = context.resources.getIdentifier("iv_check_$slotIdx", "id", context.packageName)
                 val titleId = context.resources.getIdentifier("tv_title_$slotIdx", "id", context.packageName)
                 val dueId = context.resources.getIdentifier("tv_due_$slotIdx", "id", context.packageName)
+                if (itemId == 0 || checkId == 0 || titleId == 0) {
+                    Log.w(TAG, "Resource ID not found for slot $slotIdx")
+                    continue
+                }
 
                 if (i < visibleCount) {
                     val taskObj = tasks.optJSONObject(i) ?: continue
@@ -137,18 +165,21 @@ class PlansAppWidgetProvider : HomeWidgetProvider() {
                         putExtra(EXTRA_APP_WIDGET_ID, widgetId)
                     }
                     val togglePi = PendingIntent.getBroadcast(
-                        context, taskId.hashCode(), toggleIntent,
+                        context, taskId.hashCode() + widgetId, toggleIntent,
                         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
                     )
                     views.setOnClickPendingIntent(checkId, togglePi)
+                    views.setOnClickPendingIntent(itemId, togglePi)
 
                     views.setTextViewText(titleId, title)
-                    val titleLaunchIntent = HomeWidgetLaunchIntent.getActivity(
-                        context,
-                        com.plansapp.MainActivity::class.java,
-                        Uri.parse("plans://task/$taskId"),
+                    val titleIntent = Intent(context, com.plansapp.MainActivity::class.java).apply {
+                        action = "es.antonborri.home_widget.action.LAUNCH"
+                    }
+                    val titlePi = PendingIntent.getActivity(
+                        context, widgetId * 100 + 2 + i, titleIntent,
+                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
                     )
-                    views.setOnClickPendingIntent(titleId, titleLaunchIntent)
+                    views.setOnClickPendingIntent(titleId, titlePi)
 
                     if (dueDate > 0) {
                         views.setTextViewText(dueId, formatDueDate(dueDate))
@@ -179,15 +210,23 @@ class PlansAppWidgetProvider : HomeWidgetProvider() {
         ): RemoteViews {
             val views = RemoteViews(context.packageName, R.layout.widget_view_picker)
 
+            class BuiltInView(val name: String, val viewKey: String, val textId: Int, val dotId: Int, val rowId: Int, val dotRes: Int)
             val builtInViews = listOf(
-                Triple("Inbox", VIEW_INBOX, R.id.tv_option_1),
-                Triple("Today", VIEW_TODAY, R.id.tv_option_2),
-                Triple("Completed", VIEW_COMPLETED, R.id.tv_option_3),
+                BuiltInView("Inbox", VIEW_INBOX, R.id.tv_option_1, R.id.iv_dot_1, R.id.ll_option_1, R.drawable.widget_dot_purple),
+                BuiltInView("Today", VIEW_TODAY, R.id.tv_option_2, R.id.iv_dot_2, R.id.ll_option_2, R.drawable.widget_dot_green),
+                BuiltInView("Completed", VIEW_COMPLETED, R.id.tv_option_3, R.id.iv_dot_3, R.id.ll_option_3, R.drawable.widget_dot_orange),
             )
 
-            for ((name, viewKey, viewId) in builtInViews) {
-                views.setTextViewText(viewId, name)
-                views.setViewVisibility(viewId, android.view.View.VISIBLE)
+            for (b in builtInViews) {
+                val name = b.name
+                val viewKey = b.viewKey
+                val textId = b.textId
+                val dotId = b.dotId
+                val rowId = b.rowId
+                val dotRes = b.dotRes
+                views.setTextViewText(textId, name)
+                views.setViewVisibility(rowId, android.view.View.VISIBLE)
+                views.setImageViewResource(dotId, dotRes)
                 val intent = Intent(context, WidgetInteractionReceiver::class.java).apply {
                     action = ACTION_SET_VIEW
                     putExtra(EXTRA_VIEW, viewKey)
@@ -197,7 +236,7 @@ class PlansAppWidgetProvider : HomeWidgetProvider() {
                     context, viewKey.hashCode() + widgetId, intent,
                     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
                 )
-                views.setOnClickPendingIntent(viewId, pi)
+                views.setOnClickPendingIntent(textId, pi)
             }
 
             val projectsJson = widgetData.getString("widget_projects", "[]") ?: "[]"
@@ -205,15 +244,28 @@ class PlansAppWidgetProvider : HomeWidgetProvider() {
             val maxProjects = MAX_VISIBLE_OPTIONS - builtInViews.size
             val projectCount = minOf(projects.length(), maxProjects)
 
+            if (projectCount > 0) {
+                views.setViewVisibility(R.id.divider, android.view.View.VISIBLE)
+            } else {
+                views.setViewVisibility(R.id.divider, android.view.View.GONE)
+            }
+
             for (i in 0 until projectCount) {
                 val slotIdx = builtInViews.size + i + 1
-                val viewId = context.resources.getIdentifier("tv_option_$slotIdx", "id", context.packageName)
+                val rowId = context.resources.getIdentifier("ll_option_$slotIdx", "id", context.packageName)
+                val textId = context.resources.getIdentifier("tv_option_$slotIdx", "id", context.packageName)
+                val dotId = context.resources.getIdentifier("iv_dot_$slotIdx", "id", context.packageName)
+                if (rowId == 0 || textId == 0 || dotId == 0) {
+                    Log.w(TAG, "Resource ID not found for option slot $slotIdx")
+                    continue
+                }
                 val projectObj = projects.optJSONObject(i) ?: continue
                 val projectName = projectObj.getString("name")
                 val projectId = projectObj.getString("id")
 
-                views.setTextViewText(viewId, projectName)
-                views.setViewVisibility(viewId, android.view.View.VISIBLE)
+                views.setTextViewText(textId, projectName)
+                views.setViewVisibility(rowId, android.view.View.VISIBLE)
+                views.setImageViewResource(dotId, R.drawable.widget_dot_blue)
                 val intent = Intent(context, WidgetInteractionReceiver::class.java).apply {
                     action = ACTION_SET_VIEW
                     putExtra(EXTRA_VIEW, "${VIEW_PROJECT_PREFIX}$projectId")
@@ -223,12 +275,12 @@ class PlansAppWidgetProvider : HomeWidgetProvider() {
                     context, projectId.hashCode() + widgetId, intent,
                     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
                 )
-                views.setOnClickPendingIntent(viewId, pi)
+                views.setOnClickPendingIntent(textId, pi)
             }
 
             for (i in (builtInViews.size + projectCount + 1)..MAX_VISIBLE_OPTIONS) {
-                val viewId = context.resources.getIdentifier("tv_option_$i", "id", context.packageName)
-                views.setViewVisibility(viewId, android.view.View.GONE)
+                val rowId = context.resources.getIdentifier("ll_option_$i", "id", context.packageName)
+                if (rowId != 0) views.setViewVisibility(rowId, android.view.View.GONE)
             }
 
             return views
@@ -276,6 +328,7 @@ class PlansAppWidgetProvider : HomeWidgetProvider() {
             appWidgetId: Int,
             taskId: String,
         ) {
+            hapticFeedback(context)
             try {
                 val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
                 val view = prefs.getString("widget_view_$appWidgetId", VIEW_INBOX) ?: VIEW_INBOX
@@ -312,6 +365,7 @@ class PlansAppWidgetProvider : HomeWidgetProvider() {
             appWidgetId: Int,
             view: String,
         ) {
+            hapticFeedback(context)
             try {
                 val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
                 prefs.edit().putString("widget_view_$appWidgetId", view).apply()
