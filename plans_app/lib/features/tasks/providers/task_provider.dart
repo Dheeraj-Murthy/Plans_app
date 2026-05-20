@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/task.dart';
@@ -48,6 +49,42 @@ class UndoStackNotifier extends Notifier<List<UndoAction>> {
     return action;
   }
 }
+
+class _SetNotifier extends Notifier<Set<String>> {
+  final Map<String, Timer> _timers = {};
+
+  @override
+  Set<String> build() {
+    ref.onDispose(() {
+      for (final t in _timers.values) { t.cancel(); }
+      _timers.clear();
+    });
+    return {};
+  }
+
+  void add(String id, int delayMs) {
+    _timers[id]?.cancel();
+    state = {...state, id};
+    _timers[id] = Timer(Duration(milliseconds: delayMs), () {
+      state = Set<String>.from(state)..remove(id);
+      _timers.remove(id);
+    });
+  }
+
+  void remove(String id) {
+    _timers[id]?.cancel();
+    _timers.remove(id);
+    if (state.contains(id)) {
+      state = Set<String>.from(state)..remove(id);
+    }
+  }
+}
+
+final completingTaskIdsProvider =
+    NotifierProvider<_SetNotifier, Set<String>>(_SetNotifier.new);
+
+final uncompletingTaskIdsProvider =
+    NotifierProvider<_SetNotifier, Set<String>>(_SetNotifier.new);
 
 final tasksProvider =
     NotifierProvider<TasksNotifier, List<Task>>(TasksNotifier.new);
@@ -108,10 +145,16 @@ final filteredTasksProvider = Provider<List<Task>>((ref) {
   final tasks = ref.watch(tasksProvider);
   final SidebarSelection selection = ref.watch(sidebarSelectionProvider);
   final query = ref.watch(searchQueryProvider).toLowerCase().trim();
+  final completingIds = ref.watch(completingTaskIdsProvider);
+  final uncompletingIds = ref.watch(uncompletingTaskIdsProvider);
 
   var filtered = switch (selection) {
     ViewSelection(:final view) => switch (view) {
-        ViewType.inbox => tasks,
+        ViewType.inbox => tasks.where((t) {
+          if (!t.isCompleted) return true;
+          if (completingIds.contains(t.id)) return true;
+          return false;
+        }).toList(),
         ViewType.today => tasks.where((t) {
             final due = t.dueDate;
             if (due == null) return false;
@@ -120,8 +163,11 @@ final filteredTasksProvider = Provider<List<Task>>((ref) {
                 due.month == now.month &&
                 due.day == now.day;
           }).toList(),
-        ViewType.completed =>
-          tasks.where((t) => t.isCompleted).toList(),
+        ViewType.completed => tasks.where((t) {
+          if (t.isCompleted) return true;
+          if (uncompletingIds.contains(t.id)) return true;
+          return false;
+        }).toList(),
       },
     ProjectSelection(:final projectId) =>
       tasks.where((t) => t.projectId == projectId).toList(),
@@ -139,12 +185,21 @@ final filteredTasksProvider = Provider<List<Task>>((ref) {
 
 class TasksNotifier extends Notifier<List<Task>> {
   late final DatabaseService _db;
+  Timer? _widgetUpdateTimer;
 
   @override
   List<Task> build() {
     _db = ref.read(databaseServiceProvider);
+    ref.onDispose(() => _widgetUpdateTimer?.cancel());
     _load();
     return [];
+  }
+
+  void _debouncedWidgetUpdate() {
+    _widgetUpdateTimer?.cancel();
+    _widgetUpdateTimer = Timer(const Duration(seconds: 2), () {
+      WidgetBridge.notifyUpdate(allTasks: state);
+    });
   }
 
   void _load() {
@@ -175,24 +230,41 @@ class TasksNotifier extends Notifier<List<Task>> {
     );
     state = [...state, task];
     NotificationService.scheduleForTask(task);
-    WidgetBridge.notifyUpdate(allTasks: state);
+    _debouncedWidgetUpdate();
   }
 
   bool toggleTask(String id) {
-    bool wasCompleted = false;
-    state = state.map((t) {
-      if (t.id != id) return t;
-      wasCompleted = t.isCompleted;
-      final toggled = t.copyWith(isCompleted: !t.isCompleted);
-      _db.updateTask(toggled);
-      if (toggled.isCompleted) {
-        NotificationService.cancelForTask(id);
-      } else {
-        NotificationService.scheduleForTask(toggled);
+    final index = state.indexWhere((t) => t.id == id);
+    if (index == -1) return false;
+
+    final task = state[index];
+    final wasCompleted = task.isCompleted;
+    final toggled = task.copyWith(isCompleted: !wasCompleted);
+
+    final newState = List<Task>.of(state);
+    newState[index] = toggled;
+    state = newState;
+
+    _db.updateTask(toggled);
+    if (toggled.isCompleted) {
+      NotificationService.cancelForTask(id);
+    } else {
+      NotificationService.scheduleForTask(toggled);
+    }
+
+    if (!wasCompleted) {
+      ref.read(uncompletingTaskIdsProvider.notifier).remove(id);
+      final selection = ref.read(sidebarSelectionProvider);
+      final isInbox = selection is ViewSelection && selection.view == ViewType.inbox;
+      if (isInbox) {
+        ref.read(completingTaskIdsProvider.notifier).add(id, 5300);
       }
-      return toggled;
-    }).toList();
-    WidgetBridge.notifyUpdate(allTasks: state);
+    } else {
+      ref.read(completingTaskIdsProvider.notifier).remove(id);
+      ref.read(uncompletingTaskIdsProvider.notifier).add(id, 300);
+    }
+
+    _debouncedWidgetUpdate();
     return wasCompleted;
   }
 
@@ -201,7 +273,7 @@ class TasksNotifier extends Notifier<List<Task>> {
     state = state.where((t) => t.id != id).toList();
     _db.deleteTask(id);
     NotificationService.cancelForTask(id);
-    WidgetBridge.notifyUpdate(allTasks: state);
+    _debouncedWidgetUpdate();
     return task;
   }
 
@@ -209,25 +281,18 @@ class TasksNotifier extends Notifier<List<Task>> {
     await _db.restoreTask(task.id);
     state = [...state, task];
     NotificationService.scheduleForTask(task);
-    WidgetBridge.notifyUpdate(allTasks: state);
+    _debouncedWidgetUpdate();
   }
 
-  // Future<void> clearCompleted() async {
-  //   final completed = state.where((t) => t.isCompleted).toList();
-  //   if (completed.isEmpty) return;
-  //   state = state.where((t) => !t.isCompleted).toList();
-  //   await _db.clearCompleted();
-  //   WidgetBridge.notifyUpdate(allTasks: state);
-  // }
-
   void updateTask(String id, Task updated) {
-    state = state.map((t) {
-      if (t.id != id) return t;
-      _db.updateTask(updated);
-      NotificationService.scheduleForTask(updated);
-      return updated;
-    }).toList();
-    WidgetBridge.notifyUpdate(allTasks: state);
+    final idx = state.indexWhere((t) => t.id == id);
+    if (idx == -1) return;
+    final newState = List<Task>.of(state);
+    newState[idx] = updated;
+    state = newState;
+    _db.updateTask(updated);
+    NotificationService.scheduleForTask(updated);
+    _debouncedWidgetUpdate();
   }
 
   void reorderTask(int oldIndex, int newIndex) {
@@ -236,6 +301,6 @@ class TasksNotifier extends Notifier<List<Task>> {
     tasks.insert(newIndex, moved);
     state = tasks;
     _db.reorderTasks(tasks.map((t) => t.id).toList());
-    WidgetBridge.notifyUpdate(allTasks: state);
+    _debouncedWidgetUpdate();
   }
 }

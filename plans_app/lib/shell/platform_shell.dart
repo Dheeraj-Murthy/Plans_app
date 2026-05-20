@@ -40,8 +40,13 @@ class _PlatformAdaptiveShellState
     }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final intent = ref.read(widgetIntentProvider);
-      if (intent == 'add_task') {
+      if (intent?['action'] == 'add_task') {
         _openAddTask();
+      } else if (intent?['action'] == 'open_task') {
+        final taskId = intent?['task_id'];
+        if (taskId != null && taskId.isNotEmpty) {
+          _openTask(taskId);
+        }
       }
     });
   }
@@ -49,6 +54,11 @@ class _PlatformAdaptiveShellState
   Future<dynamic> _handleNativeCall(MethodCall call) async {
     if (call.method == 'openAddTask') {
       _openAddTask();
+    } else if (call.method == 'openTask') {
+      final taskId = call.arguments as String?;
+      if (taskId != null && taskId.isNotEmpty) {
+        _openTask(taskId);
+      }
     }
   }
 
@@ -63,6 +73,21 @@ class _PlatformAdaptiveShellState
       backgroundColor: AppColors.surface,
       builder: (_) => const AddTaskSheet(),
     );
+  }
+
+  void _openTask(String taskId) {
+    final tasks = ref.read(tasksProvider);
+    final task = tasks.where((t) => t.id == taskId).firstOrNull;
+    if (task == null) return;
+    if (task.isCompleted) {
+      ref
+          .read(sidebarSelectionProvider.notifier)
+          .select(const ViewSelection(ViewType.completed));
+    } else {
+      ref
+          .read(sidebarSelectionProvider.notifier)
+          .select(ProjectSelection(task.projectId));
+    }
   }
 
   @override

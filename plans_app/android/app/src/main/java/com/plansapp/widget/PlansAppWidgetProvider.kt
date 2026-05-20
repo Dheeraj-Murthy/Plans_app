@@ -1,11 +1,14 @@
 package com.plansapp.widget
 
+import android.app.AlarmManager
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
+import android.graphics.Paint
 import android.os.Build
+import android.os.SystemClock
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.util.Log
@@ -20,6 +23,7 @@ import java.util.Locale
 
 private const val PREFS_NAME = "HomeWidgetPreferences"
 private const val TAG = "PlansWidget"
+private const val REFRESH_INTERVAL_MS = 30 * 60 * 1000L
 
 class PlansAppWidgetProvider : HomeWidgetProvider() {
 
@@ -33,9 +37,68 @@ class PlansAppWidgetProvider : HomeWidgetProvider() {
             val views = buildWidgetViews(context, widgetData, widgetId)
             appWidgetManager.updateAppWidget(widgetId, views)
         }
+        scheduleRefreshAlarm(context)
+    }
+
+    override fun onDeleted(context: Context, appWidgetIds: IntArray) {
+        super.onDeleted(context, appWidgetIds)
+        cancelRefreshAlarm(context)
+    }
+
+    override fun onEnabled(context: Context) {
+        super.onEnabled(context)
+        scheduleRefreshAlarm(context)
+    }
+
+    override fun onDisabled(context: Context) {
+        super.onDisabled(context)
+        cancelRefreshAlarm(context)
     }
 
     companion object {
+        private const val REFRESH_REQUEST_CODE = 999999
+        private const val OVERDUE_COLOR = 0xFFE53935.toInt()
+
+        fun scheduleRefreshAlarm(context: Context) {
+            try {
+                val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+                val intent = Intent(context, WidgetInteractionReceiver::class.java).apply {
+                    action = ACTION_REFRESH
+                }
+                val pi = PendingIntent.getBroadcast(
+                    context, REFRESH_REQUEST_CODE, intent,
+                    PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+                )
+                alarmManager.setInexactRepeating(
+                    AlarmManager.ELAPSED_REALTIME,
+                    SystemClock.elapsedRealtime() + REFRESH_INTERVAL_MS,
+                    REFRESH_INTERVAL_MS,
+                    pi,
+                )
+            } catch (e: Exception) {
+                Log.e(TAG, "scheduleRefreshAlarm failed", e)
+            }
+        }
+
+        fun cancelRefreshAlarm(context: Context) {
+            try {
+                val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+                val intent = Intent(context, WidgetInteractionReceiver::class.java).apply {
+                    action = ACTION_REFRESH
+                }
+                val pi = PendingIntent.getBroadcast(
+                    context, REFRESH_REQUEST_CODE, intent,
+                    PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_NO_CREATE,
+                )
+                if (pi != null) {
+                    alarmManager.cancel(pi)
+                    pi.cancel()
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "cancelRefreshAlarm failed", e)
+            }
+        }
+
         private fun hapticFeedback(context: Context) {
             try {
                 val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
@@ -50,6 +113,7 @@ class PlansAppWidgetProvider : HomeWidgetProvider() {
         }
         private const val ACTION_TOGGLE = "com.plansapp.action.TOGGLE"
         private const val ACTION_SET_VIEW = "com.plansapp.action.SET_VIEW"
+        private const val ACTION_REFRESH = "com.plansapp.action.REFRESH"
         private const val EXTRA_TASK_ID = "task_id"
         private const val EXTRA_VIEW = "view"
         private const val EXTRA_APP_WIDGET_ID = "appWidgetId"
@@ -91,8 +155,24 @@ class PlansAppWidgetProvider : HomeWidgetProvider() {
         ): RemoteViews {
             val views = RemoteViews(context.packageName, R.layout.widget_task_list)
 
+            val tasksJson = widgetData.getString("widget_tasks_$view", "[]") ?: "[]"
+            val raw = JSONArray(tasksJson)
+            val tasks = JSONArray()
+            for (i in 0 until raw.length()) {
+                val el = raw.opt(i)
+                if (el is JSONObject) {
+                    tasks.put(el)
+                } else if (el is String) {
+                    try { tasks.put(JSONObject(el)) } catch (_: Exception) {}
+                }
+            }
+            val taskCount = tasks.length()
+            val visibleCount = minOf(taskCount, MAX_VISIBLE_TASKS)
+
             val selectedName = getViewDisplayName(widgetData, view)
-            views.setTextViewText(R.id.tv_header_title, selectedName)
+            val headerText = if (taskCount > 0) "$selectedName ($taskCount)" else selectedName
+            views.setTextViewText(R.id.tv_header_title, headerText)
+            views.setContentDescription(R.id.tv_header_title, "$selectedName — tap to switch view")
 
             val headerIntent = Intent(context, WidgetInteractionReceiver::class.java).apply {
                 action = ACTION_SET_VIEW
@@ -107,26 +187,29 @@ class PlansAppWidgetProvider : HomeWidgetProvider() {
 
             val addIntent = Intent(context, com.plansapp.MainActivity::class.java).apply {
                 action = "es.antonborri.home_widget.action.LAUNCH"
+                putExtra("action", "add_task")
             }
             val addPi = PendingIntent.getActivity(
                 context, widgetId * 100 + 1, addIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
             )
             views.setOnClickPendingIntent(R.id.btn_add, addPi)
+            views.setContentDescription(R.id.btn_add, "Add task")
 
-            val tasksJson = widgetData.getString("widget_tasks_$view", "[]") ?: "[]"
-            val raw = JSONArray(tasksJson)
-            val tasks = JSONArray()
-            for (i in 0 until raw.length()) {
-                val el = raw.opt(i)
-                if (el is JSONObject) {
-                    tasks.put(el)
-                } else if (el is String) {
-                    try { tasks.put(JSONObject(el)) } catch (_: Exception) {}
+            val isMultiProject = view == VIEW_TODAY || view == VIEW_COMPLETED
+            val now = System.currentTimeMillis()
+
+            if (taskCount == 0) {
+                views.setViewVisibility(R.id.tv_empty, android.view.View.VISIBLE)
+                for (i in 0 until MAX_VISIBLE_TASKS) {
+                    val slotIdx = i + 1
+                    val itemId = context.resources.getIdentifier("ll_item_$slotIdx", "id", context.packageName)
+                    if (itemId != 0) views.setViewVisibility(itemId, android.view.View.GONE)
                 }
+                views.setViewVisibility(R.id.tv_more, android.view.View.GONE)
+                return views
             }
-            val taskCount = tasks.length()
-            val visibleCount = minOf(taskCount, MAX_VISIBLE_TASKS)
+            views.setViewVisibility(R.id.tv_empty, android.view.View.GONE)
 
             for (i in 0 until MAX_VISIBLE_TASKS) {
                 val slotIdx = i + 1
@@ -158,6 +241,7 @@ class PlansAppWidgetProvider : HomeWidgetProvider() {
                         else -> R.drawable.widget_checkbox_border_gray
                     }
                     views.setImageViewResource(checkId, checkRes)
+                    views.setContentDescription(checkId, "${if (isCompleted) "Completed" else "Incomplete"}, $title")
 
                     val toggleIntent = Intent(context, WidgetInteractionReceiver::class.java).apply {
                         action = ACTION_TOGGLE
@@ -172,8 +256,17 @@ class PlansAppWidgetProvider : HomeWidgetProvider() {
                     views.setOnClickPendingIntent(itemId, togglePi)
 
                     views.setTextViewText(titleId, title)
+                    if (isCompleted) {
+                        views.setInt(titleId, "setPaintFlags", Paint.STRIKE_THRU_TEXT_FLAG)
+                    } else {
+                        views.setInt(titleId, "setPaintFlags", 0)
+                    }
+                    views.setContentDescription(titleId, "$title, tap to open")
+
                     val titleIntent = Intent(context, com.plansapp.MainActivity::class.java).apply {
                         action = "es.antonborri.home_widget.action.LAUNCH"
+                        putExtra("task_id", taskId)
+                        putExtra("current_view", view)
                     }
                     val titlePi = PendingIntent.getActivity(
                         context, widgetId * 100 + 2 + i, titleIntent,
@@ -182,8 +275,28 @@ class PlansAppWidgetProvider : HomeWidgetProvider() {
                     views.setOnClickPendingIntent(titleId, titlePi)
 
                     if (dueDate > 0) {
-                        views.setTextViewText(dueId, formatDueDate(dueDate))
+                        val dueText = formatDueDate(dueDate)
+                        val projectName = if (isMultiProject) lookupProjectName(widgetData, taskObj.optString("project_id", "")) else null
+                        val displayText = if (projectName != null) "$dueText · $projectName" else dueText
+                        views.setTextViewText(dueId, displayText)
                         views.setViewVisibility(dueId, android.view.View.VISIBLE)
+                        val isOverdue = dueDate < now && !isCompleted && view != VIEW_COMPLETED
+                        if (isOverdue) {
+                            views.setTextColor(dueId, OVERDUE_COLOR)
+                        } else {
+                            views.setTextColor(dueId, 0xFF888888.toInt())
+                        }
+                        views.setContentDescription(dueId, "Due $dueText${if (projectName != null) ", $projectName" else ""}")
+                    } else if (isMultiProject) {
+                        val projectName = lookupProjectName(widgetData, taskObj.optString("project_id", ""))
+                        if (projectName != null) {
+                            views.setTextViewText(dueId, projectName)
+                            views.setTextColor(dueId, 0xFF666666.toInt())
+                            views.setViewVisibility(dueId, android.view.View.VISIBLE)
+                            views.setContentDescription(dueId, projectName)
+                        } else {
+                            views.setViewVisibility(dueId, android.view.View.GONE)
+                        }
                     } else {
                         views.setViewVisibility(dueId, android.view.View.GONE)
                     }
@@ -194,8 +307,10 @@ class PlansAppWidgetProvider : HomeWidgetProvider() {
 
             val moreCount = taskCount - MAX_VISIBLE_TASKS
             if (moreCount > 0) {
-                views.setTextViewText(R.id.tv_more, "and $moreCount more...")
+                val moreText = "and $moreCount more..."
+                views.setTextViewText(R.id.tv_more, moreText)
                 views.setViewVisibility(R.id.tv_more, android.view.View.VISIBLE)
+                views.setContentDescription(R.id.tv_more, "$moreCount more tasks")
             } else {
                 views.setViewVisibility(R.id.tv_more, android.view.View.GONE)
             }
@@ -227,6 +342,7 @@ class PlansAppWidgetProvider : HomeWidgetProvider() {
                 views.setTextViewText(textId, name)
                 views.setViewVisibility(rowId, android.view.View.VISIBLE)
                 views.setImageViewResource(dotId, dotRes)
+                views.setContentDescription(textId, name)
                 val intent = Intent(context, WidgetInteractionReceiver::class.java).apply {
                     action = ACTION_SET_VIEW
                     putExtra(EXTRA_VIEW, viewKey)
@@ -262,10 +378,12 @@ class PlansAppWidgetProvider : HomeWidgetProvider() {
                 val projectObj = projects.optJSONObject(i) ?: continue
                 val projectName = projectObj.getString("name")
                 val projectId = projectObj.getString("id")
+                val colorIndex = projectObj.optInt("color_index", 0)
 
                 views.setTextViewText(textId, projectName)
                 views.setViewVisibility(rowId, android.view.View.VISIBLE)
-                views.setImageViewResource(dotId, R.drawable.widget_dot_blue)
+                views.setImageViewResource(dotId, dotResForColorIndex(colorIndex))
+                views.setContentDescription(textId, "$projectName — project")
                 val intent = Intent(context, WidgetInteractionReceiver::class.java).apply {
                     action = ACTION_SET_VIEW
                     putExtra(EXTRA_VIEW, "${VIEW_PROJECT_PREFIX}$projectId")
@@ -286,6 +404,19 @@ class PlansAppWidgetProvider : HomeWidgetProvider() {
             return views
         }
 
+        private fun lookupProjectName(widgetData: SharedPreferences, projectId: String): String? {
+            if (projectId == "default") return null
+            val projectsJson = widgetData.getString("widget_projects", "[]") ?: "[]"
+            val projects = JSONArray(projectsJson)
+            for (i in 0 until projects.length()) {
+                val p = projects.optJSONObject(i) ?: continue
+                if (p.optString("id", "") == projectId) {
+                    return p.getString("name")
+                }
+            }
+            return null
+        }
+
         private fun getViewDisplayName(widgetData: SharedPreferences, view: String): String {
             return when (view) {
                 VIEW_INBOX -> "Inbox"
@@ -295,17 +426,19 @@ class PlansAppWidgetProvider : HomeWidgetProvider() {
                 else -> {
                     if (view.startsWith(VIEW_PROJECT_PREFIX)) {
                         val projectId = view.removePrefix(VIEW_PROJECT_PREFIX)
-                        val projectsJson = widgetData.getString("widget_projects", "[]") ?: "[]"
-                        val projects = JSONArray(projectsJson)
-                        for (i in 0 until projects.length()) {
-                            val p = projects.optJSONObject(i) ?: continue
-                            if (p.optString("id", "") == projectId) {
-                                return p.getString("name")
-                            }
-                        }
-                    }
-                    "Inbox"
+                        lookupProjectName(widgetData, projectId) ?: "Inbox"
+                    } else "Inbox"
                 }
+            }
+        }
+
+        private fun dotResForColorIndex(index: Int): Int {
+            return when (index % 5) {
+                0 -> R.drawable.widget_dot_purple
+                1 -> R.drawable.widget_dot_red
+                2 -> R.drawable.widget_dot_green
+                3 -> R.drawable.widget_dot_orange
+                else -> R.drawable.widget_dot_blue
             }
         }
 
@@ -379,6 +512,44 @@ class PlansAppWidgetProvider : HomeWidgetProvider() {
                 appWidgetManager.updateAppWidget(appWidgetId, views)
             } catch (e: Exception) {
                 Log.e(TAG, "handleSetView failed", e)
+            }
+        }
+
+        fun handleRefresh(context: Context, appWidgetIds: IntArray) {
+            try {
+                val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                val appWidgetManager = AppWidgetManager.getInstance(context)
+                val db = WidgetDbHelper.getInstance(context)
+
+                for (widgetId in appWidgetIds) {
+                    val view = prefs.getString("widget_view_$widgetId", VIEW_INBOX) ?: VIEW_INBOX
+                    if (view == VIEW_PICKER) {
+                        val projects = db.getProjects()
+                        prefs.edit().putString("widget_projects", JSONArray(projects.map { p ->
+                            JSONObject().apply {
+                                put("id", p.id)
+                                put("name", p.name)
+                                put("color_index", p.colorIndex)
+                            }
+                        }).toString()).apply()
+                    } else {
+                        val tasks = db.getTasks(view)
+                        prefs.edit().putString("widget_tasks_$view", JSONArray(tasks.map { t ->
+                            JSONObject().apply {
+                                put("id", t.id)
+                                put("title", t.title)
+                                put("due_date", t.dueDate ?: JSONObject.NULL)
+                                put("priority", t.priority)
+                                put("is_completed", t.isCompleted)
+                                put("project_id", t.projectId)
+                            }
+                        }).toString()).apply()
+                    }
+                    val views = buildWidgetViews(context, prefs, widgetId)
+                    appWidgetManager.updateAppWidget(widgetId, views)
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "handleRefresh failed", e)
             }
         }
     }

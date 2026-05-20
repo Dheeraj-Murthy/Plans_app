@@ -51,6 +51,13 @@
                 <action android:name="com.plansapp.action.SET_VIEW" />
             </intent-filter>
         </receiver>
+        <receiver
+            android:name=".widget.BootReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
     </application>
     <queries>
         <intent>

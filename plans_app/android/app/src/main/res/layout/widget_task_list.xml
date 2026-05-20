@@ -290,4 +290,15 @@
         android:textSize="12sp"
         android:visibility="gone" />
 
+    <TextView
+        android:id="@+id/tv_empty"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:gravity="center"
+        android:text="No tasks yet"
+        android:textColor="#555555"
+        android:textSize="14sp"
+        android:visibility="gone" />
+
 </LinearLayout>

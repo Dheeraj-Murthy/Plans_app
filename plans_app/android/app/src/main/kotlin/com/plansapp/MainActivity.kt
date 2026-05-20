@@ -1,7 +1,6 @@
 package com.plansapp
 
 import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -11,38 +10,27 @@ class MainActivity : FlutterActivity() {
     private var latestIntent: Intent? = null
     private val DEEPLINK_CHANNEL = "plans/widget/deeplink"
     private var deeplinkChannel: MethodChannel? = null
-    private var pendingDeeplink: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         latestIntent = intent
-        handleWidgetLaunch(intent)
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         latestIntent = intent
-        handleWidgetLaunch(intent)
+        processWidgetIntent(intent)
     }
 
-    private fun handleWidgetLaunch(intent: Intent?) {
-        val uri = intent?.data ?: return
-        if (deeplinkChannel != null) {
-            processDeeplink(uri)
-        } else {
-            pendingDeeplink = uri.toString()
+    private fun processWidgetIntent(intent: Intent) {
+        val channel = deeplinkChannel ?: return
+        val action = intent.getStringExtra("action")
+        val taskId = intent.getStringExtra("task_id")
+        if (action == "add_task") {
+            channel.invokeMethod("openAddTask", null)
         }
-    }
-
-    private fun processDeeplink(uri: Uri) {
-        when (uri.path) {
-            "/addTask" -> deeplinkChannel?.invokeMethod("openAddTask", null)
-            else -> {
-                val taskId = uri.lastPathSegment
-                if (taskId != null) {
-                    deeplinkChannel?.invokeMethod("openTask", taskId)
-                }
-            }
+        if (taskId != null) {
+            channel.invokeMethod("openTask", taskId)
         }
     }
 
@@ -54,27 +42,19 @@ class MainActivity : FlutterActivity() {
             when (call.method) {
                 "getInitialIntent" -> {
                     val i = latestIntent
-                    val uri = i?.data
-                    if (uri != null) {
-                        val path = uri.path ?: ""
-                        when (path) {
-                            "/addTask" -> result.success(mapOf("action" to "add_task"))
-                            else -> {
-                                val taskId = uri.lastPathSegment ?: ""
-                                result.success(mapOf("action" to "open_task", "task_id" to taskId))
-                            }
-                        }
+                    val action = i?.getStringExtra("action")
+                    val taskId = i?.getStringExtra("task_id")
+                    val view = i?.getStringExtra("current_view")
+                    if (action == "add_task") {
+                        result.success(mapOf("action" to "add_task"))
+                    } else if (taskId != null) {
+                        result.success(mapOf("action" to "open_task", "task_id" to taskId, "view" to (view ?: "")))
                     } else {
                         result.success(mapOf("action" to ""))
                     }
                 }
                 else -> result.notImplemented()
             }
-        }
-
-        pendingDeeplink?.let {
-            processDeeplink(Uri.parse(it))
-            pendingDeeplink = null
         }
     }
 }

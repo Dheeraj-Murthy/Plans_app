@@ -12,7 +12,7 @@ import 'routing/app_router.dart';
 import 'shared/database/database_service.dart';
 import 'shared/notifications/notification_service.dart';
 
-final widgetIntentProvider = Provider<String?>((ref) => null);
+final widgetIntentProvider = Provider<Map<String, String>?>((ref) => null);
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -27,12 +27,14 @@ void main() async {
     await RustLib.init();
   }
 
-  String? initialIntent;
+  Map<String, String>? initialIntent;
   if (!kIsWeb && Platform.isAndroid) {
     try {
       const deeplinkChannel = MethodChannel('plans/widget/deeplink');
-      final intent = await deeplinkChannel.invokeMethod<Map>('getInitialIntent');
-      initialIntent = intent?['action'] as String?;
+      final raw = await deeplinkChannel.invokeMethod<Map>('getInitialIntent');
+      if (raw != null) {
+        initialIntent = raw.map((k, v) => MapEntry(k.toString(), v?.toString() ?? ''));
+      }
     } catch (_) {}
   }
 
