@@ -18,7 +18,7 @@ class ProjectSelection extends SidebarSelection {
   const ProjectSelection(this.projectId);
 }
 
-enum ViewType { inbox, today, completed }
+enum ViewType { inbox, today, completed, timeline }
 
 final projectsProvider =
     NotifierProvider<ProjectsNotifier, List<Project>>(ProjectsNotifier.new);

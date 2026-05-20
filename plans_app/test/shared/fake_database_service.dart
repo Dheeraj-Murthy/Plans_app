@@ -23,6 +23,7 @@ class FakeDatabaseService extends DatabaseService {
     int priority = 0,
     String projectId = 'default',
     int? reminderMinutes,
+    String? recurrence,
   }) async {
     final task = Task(
       id: const Uuid().v4(),
@@ -32,6 +33,7 @@ class FakeDatabaseService extends DatabaseService {
       priority: TaskPriority.values[priority],
       projectId: projectId,
       reminderMinutes: reminderMinutes,
+      recurrence: recurrence,
     );
     _tasks.add(task);
     return task;

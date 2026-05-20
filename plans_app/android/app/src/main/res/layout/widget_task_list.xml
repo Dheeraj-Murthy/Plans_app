@@ -69,8 +69,10 @@
 
             <TextView
                 android:id="@+id/tv_due_1"
-                android:layout_width="match_parent"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:paddingHorizontal="6dp"
+                android:paddingVertical="1dp"
                 android:textColor="#888888"
                 android:textSize="12sp"
                 android:visibility="gone" />
@@ -110,11 +112,14 @@
 
             <TextView
                 android:id="@+id/tv_due_2"
-                android:layout_width="match_parent"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:paddingHorizontal="6dp"
+                android:paddingVertical="1dp"
                 android:textColor="#888888"
                 android:textSize="12sp"
                 android:visibility="gone" />
+
         </LinearLayout>
     </LinearLayout>
 
@@ -151,8 +156,10 @@
 
             <TextView
                 android:id="@+id/tv_due_3"
-                android:layout_width="match_parent"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:paddingHorizontal="6dp"
+                android:paddingVertical="1dp"
                 android:textColor="#888888"
                 android:textSize="12sp"
                 android:visibility="gone" />
@@ -192,8 +199,10 @@
 
             <TextView
                 android:id="@+id/tv_due_4"
-                android:layout_width="match_parent"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:paddingHorizontal="6dp"
+                android:paddingVertical="1dp"
                 android:textColor="#888888"
                 android:textSize="12sp"
                 android:visibility="gone" />
@@ -233,8 +242,10 @@
 
             <TextView
                 android:id="@+id/tv_due_5"
-                android:layout_width="match_parent"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:paddingHorizontal="6dp"
+                android:paddingVertical="1dp"
                 android:textColor="#888888"
                 android:textSize="12sp"
                 android:visibility="gone" />
@@ -274,8 +285,10 @@
 
             <TextView
                 android:id="@+id/tv_due_6"
-                android:layout_width="match_parent"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:paddingHorizontal="6dp"
+                android:paddingVertical="1dp"
                 android:textColor="#888888"
                 android:textSize="12sp"
                 android:visibility="gone" />

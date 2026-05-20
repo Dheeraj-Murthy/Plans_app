@@ -2,15 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/task.dart';
 import '../providers/task_provider.dart';
-import '../../projects/providers/project_provider.dart';
-import '../../../theme/app_animations.dart';
+import '../../../shared/widgets/app_chip.dart';
 import '../../../theme/app_spacing.dart';
 import '../../../theme/app_theme.dart';
 import '../../../theme/app_typography.dart';
-import '../../../shared/widgets/app_chip.dart';
+import '../../../shared/helpers/recurrence.dart';
 import '../../../shared/helpers/task_helpers.dart';
 import '../../../shared/helpers/task_parser.dart';
 import '../../../shared/widgets/highlighted_task_controller.dart';
+import '../../projects/providers/project_provider.dart';
+import '../../../theme/app_animations.dart';
 
 class AddTaskSheet extends ConsumerStatefulWidget {
   final Task? existingTask;
@@ -28,6 +29,7 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
   late TaskPriority _priority;
   late int _localProjectIndex;
   late int? _reminderMinutes;
+  String? _recurrence;
   final _priorityKey = GlobalKey();
   final _projectKey = GlobalKey();
   final _reminderKey = GlobalKey();
@@ -42,6 +44,7 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
     _dueDate = task?.dueDate;
     _priority = task?.priority ?? TaskPriority.none;
     _reminderMinutes = task?.reminderMinutes;
+    _recurrence = task?.recurrence;
 
     if (task != null) {
       final projects = ref.read(projectsProvider);
@@ -154,6 +157,14 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
                         label: _reminderLabel,
                         color: _reminderMinutes != null ? AppColors.accent : null,
                         onTap: _showReminderMenu,
+                      ),
+                      AppChip(
+                        icon: Icons.repeat_outlined,
+                        label: _recurrence != null
+                            ? Recurrence.fromStorage(_recurrence!).label
+                            : 'Repeat',
+                        color: _recurrence != null ? AppColors.accent : null,
+                        onTap: _showRecurrenceMenu,
                       ),
                       AppChip(
                         key: _projectKey,
@@ -332,6 +343,24 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
     if (date != null) setState(() => _dueDate = date);
   }
 
+  void _showRecurrenceMenu() async {
+    final result = await showMenu<String>(
+      context: context,
+      position: RelativeRect.fromLTRB(300, 300, 300, 300),
+      initialValue: _recurrence,
+      items: [
+        const PopupMenuItem(value: '', child: Text('Never')),
+        const PopupMenuItem(value: 'daily|1', child: Text('Daily')),
+        const PopupMenuItem(value: 'weekly|1', child: Text('Weekly')),
+        const PopupMenuItem(value: 'monthly|1', child: Text('Monthly')),
+        const PopupMenuItem(value: 'yearly|1', child: Text('Yearly')),
+      ],
+    );
+    if (result != null) {
+      setState(() => _recurrence = result.isEmpty ? null : result);
+    }
+  }
+
   void _submit() {
     final raw = _titleController.text.trim();
     if (raw.isEmpty) return;
@@ -362,6 +391,7 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
           priority: effectivePriority,
           projectId: effectiveProjectId,
           reminderMinutes: effectiveReminder,
+          recurrence: parsed.recurrence ?? _recurrence,
         ),
       );
     } else {
@@ -372,6 +402,7 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
         priority: effectivePriority,
         projectId: effectiveProjectId,
         reminderMinutes: effectiveReminder,
+        recurrence: parsed.recurrence ?? _recurrence,
       );
     }
 

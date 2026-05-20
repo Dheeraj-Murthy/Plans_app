@@ -17,9 +17,11 @@ class TaskListScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final title = switch (ref.watch(sidebarSelectionProvider)) {
+    final selection = ref.watch(sidebarSelectionProvider);
+    final title = switch (selection) {
       ViewSelection(:final view) => switch (view) {
           ViewType.inbox => 'Inbox',
+          ViewType.timeline => 'Timeline',
           ViewType.today => 'Today',
           ViewType.completed => 'Completed',
         },
@@ -28,6 +30,7 @@ class TaskListScreen extends ConsumerWidget {
     };
 
     final isDesktop = !kIsWeb && Platform.isMacOS;
+    final isTimeline = selection is ViewSelection && selection.view == ViewType.timeline;
 
     return Column(
       children: [
@@ -38,12 +41,22 @@ class TaskListScreen extends ConsumerWidget {
             ),
             child: Text(title, style: AppTypography.headingLarge),
           ),
-        const Expanded(child: _TaskListBody()),
+        Expanded(child: isTimeline ? const _TimelineBody() : const _TaskListBody()),
         if (isDesktop) const StickyComposer(),
       ],
     );
   }
 }
+
+Map<String, ({String name, Color color})> _projectMap(WidgetRef ref) {
+  final projects = ref.watch(projectsProvider);
+  return {for (final p in projects) p.id: (
+    name: p.name,
+    color: AppColors.projectColors[p.colorIndex % AppColors.projectColors.length],
+  )};
+}
+
+bool _hasTime(DateTime dt) => dt.hour != 0 || dt.minute != 0;
 
 class _TaskListBody extends ConsumerWidget {
   const _TaskListBody();
@@ -53,6 +66,7 @@ class _TaskListBody extends ConsumerWidget {
     final filtered = ref.watch(filteredTasksProvider);
     final completingIds = ref.watch(completingTaskIdsProvider);
     final uncompletingIds = ref.watch(uncompletingTaskIdsProvider);
+    final projMap = _projectMap(ref);
 
     if (filtered.isEmpty) {
       return Center(
@@ -118,6 +132,9 @@ class _TaskListBody extends ConsumerWidget {
                     child: TaskTile(
                       task: task,
                       index: index,
+                      showTime: task.dueDate != null && _hasTime(task.dueDate!),
+                      projectName: projMap[task.projectId]?.name,
+                      projectColor: projMap[task.projectId]?.color,
                     ),
                   );
                 },
@@ -129,10 +146,208 @@ class _TaskListBody extends ConsumerWidget {
                 key: ValueKey('completed-${e.value.id}'),
                 task: e.value,
                 index: incomplete.length + e.key,
+                projectName: projMap[e.value.projectId]?.name,
+                projectColor: projMap[e.value.projectId]?.color,
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _TimelineBody extends ConsumerWidget {
+  const _TimelineBody();
+
+  static const _weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  static const _months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+  static String _dayLabel(DateTime day, DateTime today) {
+    if (day == today) return 'Today';
+    final diff = day.difference(today).inDays;
+    if (diff == 1) return 'Tomorrow';
+    if (diff < 7) return _weekdays[day.weekday - 1];
+    return '${_months[day.month - 1]} ${day.day}';
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final filtered = ref.watch(filteredTasksProvider);
+    final projMap = _projectMap(ref);
+
+    if (filtered.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.calendar_month_rounded,
+              size: 48,
+              color: AppColors.textMuted.withValues(alpha: 0.3),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              'No upcoming tasks',
+              style: AppTypography.bodyMedium.copyWith(
+                color: AppColors.textMuted,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    final overdue = <Task>[];
+    final todayTasks = <Task>[];
+    final futureMap = <DateTime, List<Task>>{};
+
+    for (final t in filtered) {
+      final due = t.dueDate!;
+      final dueDay = DateTime(due.year, due.month, due.day);
+      if (dueDay.isBefore(today)) {
+        overdue.add(t);
+      } else if (dueDay == today) {
+        todayTasks.add(t);
+      } else {
+        futureMap.putIfAbsent(dueDay, () => []).add(t);
+      }
+    }
+
+    final sortedFuture = futureMap.entries.toList()
+      ..sort((a, b) => a.key.compareTo(b.key));
+
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: AppSpacing.maxContentWidth),
+        child: ListView(
+          padding: const EdgeInsets.only(top: 8),
+          children: [
+            if (overdue.isNotEmpty)
+              _OverdueSection(tasks: overdue, today: today, projMap: projMap),
+            if (todayTasks.isNotEmpty) ...[
+              _DayHeader(label: 'Today', count: todayTasks.length),
+              ...todayTasks.map((t) => TaskTile(
+                key: ValueKey(t.id),
+                task: t,
+                index: 0,
+                showTime: _hasTime(t.dueDate!),
+                projectName: projMap[t.projectId]?.name,
+                projectColor: projMap[t.projectId]?.color,
+              )),
+            ],
+            ...sortedFuture.map((entry) => Column(
+              children: [
+                _DayHeader(
+                  label: _dayLabel(entry.key, today),
+                  count: entry.value.length,
+                ),
+                ...entry.value.map((t) => TaskTile(
+                  key: ValueKey(t.id),
+                  task: t,
+                  index: 0,
+                  showTime: _hasTime(t.dueDate!),
+                  projectName: projMap[t.projectId]?.name,
+                  projectColor: projMap[t.projectId]?.color,
+                )),
+              ],
+            )),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _OverdueSection extends StatefulWidget {
+  final List<Task> tasks;
+  final DateTime today;
+  final Map<String, ({String name, Color color})> projMap;
+  const _OverdueSection({
+    required this.tasks,
+    required this.today,
+    required this.projMap,
+  });
+
+  @override
+  State<_OverdueSection> createState() => _OverdueSectionState();
+}
+
+class _OverdueSectionState extends State<_OverdueSection> {
+  bool _expanded = true;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        InkWell(
+          onTap: () => setState(() => _expanded = !_expanded),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.lg, AppSpacing.xl, AppSpacing.lg, AppSpacing.sm,
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  _expanded ? Icons.expand_less : Icons.expand_more,
+                  size: 16,
+                  color: AppColors.danger,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  'Overdue — ${widget.tasks.length}',
+                  style: AppTypography.caption.copyWith(color: AppColors.danger),
+                ),
+                const Spacer(),
+                Container(
+                  width: 1,
+                  height: 12,
+                  color: AppColors.border,
+                ),
+              ],
+            ),
+          ),
+        ),
+        if (_expanded)
+          ...widget.tasks.map((t) => TaskTile(
+            key: ValueKey('overdue-${t.id}'),
+            task: t,
+            index: 0,
+            showTime: _hasTime(t.dueDate!),
+            showFullDate: true,
+            projectName: widget.projMap[t.projectId]?.name,
+            projectColor: widget.projMap[t.projectId]?.color,
+          )),
+      ],
+    );
+  }
+}
+
+class _DayHeader extends StatelessWidget {
+  final String label;
+  final int count;
+  const _DayHeader({required this.label, required this.count});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg, AppSpacing.xl, AppSpacing.lg, AppSpacing.sm,
+      ),
+      child: Row(
+        children: [
+          Text(
+            '$label ($count)',
+            style: AppTypography.caption.copyWith(color: AppColors.textMuted),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          const Expanded(
+            child: Divider(color: AppColors.border, thickness: 0.5, height: 1),
+          ),
+        ],
       ),
     );
   }

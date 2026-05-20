@@ -20,7 +20,7 @@ class SlimSidebar extends ConsumerWidget {
     final selection = ref.watch(sidebarSelectionProvider);
 
     final totalTasks = ref.watch(tasksProvider).where((t) => !t.isCompleted).length;
-    final todayCount = ref.watch(todayCountProvider);
+    final timelineCount = ref.watch(timelineCountProvider);
     final completedCount = ref.watch(completedCountProvider);
 
     return Container(
@@ -53,14 +53,14 @@ class SlimSidebar extends ConsumerWidget {
                 .select(const ViewSelection(ViewType.inbox)),
           ),
           SidebarItem(
-            icon: Icons.calendar_today_rounded,
-            label: 'Today',
-            count: todayCount,
+            icon: Icons.calendar_month_rounded,
+            label: 'Timeline',
+            count: timelineCount,
             isActive: selection is ViewSelection &&
-                selection.view == ViewType.today,
+                selection.view == ViewType.timeline,
             onTap: () => ref
                 .read(sidebarSelectionProvider.notifier)
-                .select(const ViewSelection(ViewType.today)),
+                .select(const ViewSelection(ViewType.timeline)),
           ),
           SidebarItem(
             icon: Icons.check_circle_outline_rounded,

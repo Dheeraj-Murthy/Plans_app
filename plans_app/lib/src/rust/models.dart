@@ -42,6 +42,7 @@ class Task {
   final PlatformInt64 updatedAt;
   final PlatformInt64 sortOrder;
   final PlatformInt64? reminderMinutes;
+  final String? recurrence;
 
   const Task({
     required this.id,
@@ -55,6 +56,7 @@ class Task {
     required this.updatedAt,
     required this.sortOrder,
     this.reminderMinutes,
+    this.recurrence,
   });
 
   @override
@@ -69,7 +71,8 @@ class Task {
       createdAt.hashCode ^
       updatedAt.hashCode ^
       sortOrder.hashCode ^
-      reminderMinutes.hashCode;
+      reminderMinutes.hashCode ^
+      recurrence.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -86,5 +89,6 @@ class Task {
           createdAt == other.createdAt &&
           updatedAt == other.updatedAt &&
           sortOrder == other.sortOrder &&
-          reminderMinutes == other.reminderMinutes;
+          reminderMinutes == other.reminderMinutes &&
+          recurrence == other.recurrence;
 }

@@ -9,6 +9,7 @@ import '../../../features/tasks/models/task.dart';
 import '../../../features/tasks/providers/task_provider.dart';
 import '../../../features/projects/providers/project_provider.dart';
 import '../app_chip.dart';
+import '../../helpers/recurrence.dart';
 import '../../helpers/task_helpers.dart';
 import '../../helpers/task_parser.dart';
 import '../highlighted_task_controller.dart';
@@ -36,6 +37,7 @@ class _StickyComposerState extends ConsumerState<StickyComposer> {
   DateTime? _dueDate;
   int _localProjectIndex = 0;
   int? _reminderMinutes;
+  String? _recurrence;
 
   @override
   void initState() {
@@ -121,6 +123,7 @@ class _StickyComposerState extends ConsumerState<StickyComposer> {
           priority: effectivePriority,
           projectId: effectiveProjectId,
           reminderMinutes: effectiveReminder,
+          recurrence: parsed.recurrence ?? _recurrence,
         );
     _titleController.clear();
     _descriptionController.clear();
@@ -128,6 +131,7 @@ class _StickyComposerState extends ConsumerState<StickyComposer> {
       _priority = TaskPriority.none;
       _dueDate = null;
       _reminderMinutes = null;
+      _recurrence = null;
       _isExpanded = false;
     });
     _focusNode.unfocus();
@@ -214,6 +218,31 @@ class _StickyComposerState extends ConsumerState<StickyComposer> {
   Future<void> _pickDate() async {
     final date = await pickDate(context, _dueDate);
     if (date != null) setState(() => _dueDate = date);
+  }
+
+  void _showRecurrenceMenu() async {
+    final renderBox = context.findRenderObject() as RenderBox?;
+    if (renderBox == null) return;
+    final result = await showMenu<String>(
+      context: context,
+      color: AppColors.elevated,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: const BorderSide(color: AppColors.border),
+      ),
+      position: RelativeRect.fromLTRB(300, 300, 300, 300),
+      initialValue: _recurrence,
+      items: [
+        const PopupMenuItem(value: '', child: Text('Never')),
+        const PopupMenuItem(value: 'daily|1', child: Text('Daily')),
+        const PopupMenuItem(value: 'weekly|1', child: Text('Weekly')),
+        const PopupMenuItem(value: 'monthly|1', child: Text('Monthly')),
+        const PopupMenuItem(value: 'yearly|1', child: Text('Yearly')),
+      ],
+    );
+    if (result != null) {
+      setState(() => _recurrence = result.isEmpty ? null : result);
+    }
   }
 
   @override
@@ -356,6 +385,14 @@ class _StickyComposerState extends ConsumerState<StickyComposer> {
                             label: _reminderLabel,
                             color: _reminderMinutes != null ? AppColors.accent : null,
                             onTap: _showReminderMenu,
+                          ),
+                          AppChip(
+                            icon: Icons.repeat_outlined,
+                            label: _recurrence != null
+                                ? Recurrence.fromStorage(_recurrence!).label
+                                : 'Repeat',
+                            color: _recurrence != null ? AppColors.accent : null,
+                            onTap: _showRecurrenceMenu,
                           ),
                           AppChip(
                             key: _projectKey,

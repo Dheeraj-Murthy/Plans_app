@@ -29,6 +29,7 @@ class DatabaseService {
     int priority = 0,
     String projectId = 'default',
     int? reminderMinutes,
+    String? recurrence,
   }) async {
     try {
       final raw = await rust_tasks.createTask(
@@ -38,6 +39,7 @@ class DatabaseService {
         priority: priority,
         projectId: projectId,
         reminderMinutes: reminderMinutes,
+        recurrence: recurrence,
       );
       return _rustTaskToDomain(raw);
     } catch (e) {
@@ -60,6 +62,7 @@ class DatabaseService {
         'updated_at': task.updatedAt.millisecondsSinceEpoch,
         'sort_order': task.sortOrder,
         'reminder_minutes': task.reminderMinutes,
+        'recurrence': task.recurrence,
       });
       await rust_tasks.updateTask(taskJson: json);
     } catch (e) {
@@ -167,6 +170,7 @@ class DatabaseService {
       updatedAt: DateTime.fromMillisecondsSinceEpoch(t.updatedAt),
       sortOrder: t.sortOrder.toInt(),
       reminderMinutes: t.reminderMinutes?.toInt(),
+      recurrence: t.recurrence,
     );
   }
 

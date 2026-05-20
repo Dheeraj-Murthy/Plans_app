@@ -14,6 +14,7 @@ class Task {
   final DateTime updatedAt;
   final int sortOrder;
   final int? reminderMinutes;
+  final String? recurrence;
 
   Task({
     required this.id,
@@ -27,6 +28,7 @@ class Task {
     DateTime? updatedAt,
     this.sortOrder = 0,
     this.reminderMinutes,
+    this.recurrence,
   })  : createdAt = createdAt ?? DateTime.now(),
         updatedAt = updatedAt ?? DateTime.now();
 
@@ -36,6 +38,7 @@ class Task {
     Object? description = _absent,
     Object? dueDate = _absent,
     Object? reminderMinutes = _absent,
+    Object? recurrence = _absent,
     TaskPriority? priority,
     bool? isCompleted,
     String? projectId,
@@ -49,6 +52,7 @@ class Task {
       description: description == _absent ? this.description : description as String?,
       dueDate: dueDate == _absent ? this.dueDate : dueDate as DateTime?,
       reminderMinutes: reminderMinutes == _absent ? this.reminderMinutes : reminderMinutes as int?,
+      recurrence: recurrence == _absent ? this.recurrence : recurrence as String?,
       priority: priority ?? this.priority,
       isCompleted: isCompleted ?? this.isCompleted,
       projectId: projectId ?? this.projectId,

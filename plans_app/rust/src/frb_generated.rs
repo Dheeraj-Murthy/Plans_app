@@ -38,7 +38,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.12.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1388727617;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 2134817197;
 
 // Section: executor
 
@@ -141,6 +141,7 @@ fn wire__crate__api__tasks__create_task_impl(
             let api_priority = <i64>::sse_decode(&mut deserializer);
             let api_project_id = <String>::sse_decode(&mut deserializer);
             let api_reminder_minutes = <Option<i64>>::sse_decode(&mut deserializer);
+            let api_recurrence = <Option<String>>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| {
                 transform_result_sse::<_, String>((move || {
@@ -151,6 +152,7 @@ fn wire__crate__api__tasks__create_task_impl(
                         api_priority,
                         api_project_id,
                         api_reminder_minutes,
+                        api_recurrence,
                     )?;
                     Ok(output_ok)
                 })())
@@ -354,6 +356,39 @@ fn wire__crate__api__tasks__reorder_tasks_impl(
         },
     )
 }
+fn wire__crate__api__tasks__restore_task_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "restore_task",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_id = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok = crate::api::tasks::restore_task(api_id)?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
 fn wire__crate__api__projects__update_project_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -417,40 +452,6 @@ fn wire__crate__api__tasks__update_task_impl(
             move |context| {
                 transform_result_sse::<_, String>((move || {
                     let output_ok = crate::api::tasks::update_task(api_task_json)?;
-                    Ok(output_ok)
-                })())
-            }
-        },
-    )
-}
-
-fn wire__crate__api__tasks__restore_task_impl(
-    port_: flutter_rust_bridge::for_generated::MessagePort,
-    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
-    rust_vec_len_: i32,
-    data_len_: i32,
-) {
-    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
-        flutter_rust_bridge::for_generated::TaskInfo {
-            debug_name: "restore_task",
-            port: Some(port_),
-            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
-        },
-        move || {
-            let message = unsafe {
-                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
-                    ptr_,
-                    rust_vec_len_,
-                    data_len_,
-                )
-            };
-            let mut deserializer =
-                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_id = <String>::sse_decode(&mut deserializer);
-            deserializer.end();
-            move |context| {
-                transform_result_sse::<_, String>((move || {
-                    let output_ok = crate::api::tasks::restore_task(api_id)?;
                     Ok(output_ok)
                 })())
             }
@@ -580,6 +581,7 @@ impl SseDecode for crate::models::Task {
         let mut var_updatedAt = <i64>::sse_decode(deserializer);
         let mut var_sortOrder = <i64>::sse_decode(deserializer);
         let mut var_reminderMinutes = <Option<i64>>::sse_decode(deserializer);
+        let mut var_recurrence = <Option<String>>::sse_decode(deserializer);
         return crate::models::Task {
             id: var_id,
             title: var_title,
@@ -592,6 +594,7 @@ impl SseDecode for crate::models::Task {
             updated_at: var_updatedAt,
             sort_order: var_sortOrder,
             reminder_minutes: var_reminderMinutes,
+            recurrence: var_recurrence,
         };
     }
 }
@@ -633,9 +636,9 @@ fn pde_ffi_dispatcher_primary_impl(
         7 => wire__crate__api__tasks__get_all_tasks_impl(port, ptr, rust_vec_len, data_len),
         8 => wire__crate__api__init_database_impl(port, ptr, rust_vec_len, data_len),
         9 => wire__crate__api__tasks__reorder_tasks_impl(port, ptr, rust_vec_len, data_len),
-        10 => wire__crate__api__projects__update_project_impl(port, ptr, rust_vec_len, data_len),
-        11 => wire__crate__api__tasks__update_task_impl(port, ptr, rust_vec_len, data_len),
-        12 => wire__crate__api__tasks__restore_task_impl(port, ptr, rust_vec_len, data_len),
+        10 => wire__crate__api__tasks__restore_task_impl(port, ptr, rust_vec_len, data_len),
+        11 => wire__crate__api__projects__update_project_impl(port, ptr, rust_vec_len, data_len),
+        12 => wire__crate__api__tasks__update_task_impl(port, ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -686,6 +689,7 @@ impl flutter_rust_bridge::IntoDart for crate::models::Task {
             self.updated_at.into_into_dart().into_dart(),
             self.sort_order.into_into_dart().into_dart(),
             self.reminder_minutes.into_into_dart().into_dart(),
+            self.recurrence.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -801,6 +805,7 @@ impl SseEncode for crate::models::Task {
         <i64>::sse_encode(self.updated_at, serializer);
         <i64>::sse_encode(self.sort_order, serializer);
         <Option<i64>>::sse_encode(self.reminder_minutes, serializer);
+        <Option<String>>::sse_encode(self.recurrence, serializer);
     }
 }
 

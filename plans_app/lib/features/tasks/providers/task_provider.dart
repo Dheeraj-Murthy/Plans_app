@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/task.dart';
 import '../../projects/providers/project_provider.dart';
 import '../../../shared/database/database_service.dart';
+import '../../../shared/helpers/recurrence.dart';
 import '../../../shared/notifications/notification_service.dart';
 import '../../../shared/widgets/widget_bridge.dart';
 
@@ -122,6 +123,13 @@ final todayCountProvider = Provider<int>((ref) {
   }).length;
 });
 
+final timelineCountProvider = Provider<int>((ref) {
+  return ref.watch(tasksProvider).where((t) {
+    if (t.isCompleted) return false;
+    return t.dueDate != null;
+  }).length;
+});
+
 final completedCountProvider = Provider<int>((ref) {
   return ref.watch(tasksProvider).where((t) => t.isCompleted).length;
 });
@@ -155,6 +163,10 @@ final filteredTasksProvider = Provider<List<Task>>((ref) {
           if (completingIds.contains(t.id)) return true;
           return false;
         }).toList(),
+        ViewType.timeline => tasks.where((t) {
+            if (t.isCompleted) return false;
+            return t.dueDate != null;
+          }).toList()..sort((a, b) => a.dueDate!.compareTo(b.dueDate!)),
         ViewType.today => tasks.where((t) {
             final due = t.dueDate;
             if (due == null) return false;
@@ -219,6 +231,7 @@ class TasksNotifier extends Notifier<List<Task>> {
     TaskPriority priority = TaskPriority.none,
     String projectId = 'default',
     int? reminderMinutes,
+    String? recurrence,
   }) async {
     final task = await _db.insertTask(
       title: title,
@@ -227,6 +240,7 @@ class TasksNotifier extends Notifier<List<Task>> {
       priority: priority.index,
       projectId: projectId,
       reminderMinutes: reminderMinutes,
+      recurrence: recurrence,
     );
     state = [...state, task];
     NotificationService.scheduleForTask(task);
@@ -253,6 +267,24 @@ class TasksNotifier extends Notifier<List<Task>> {
     }
 
     if (!wasCompleted) {
+      if (task.recurrence != null && task.dueDate != null) {
+        final rule = Recurrence.fromStorage(task.recurrence!);
+        final nextDue = rule.nextOccurrence(task.dueDate!);
+        if (nextDue != null) {
+          _db.insertTask(
+            title: task.title,
+            description: task.description,
+            dueDate: nextDue,
+            priority: task.priority.index,
+            projectId: task.projectId,
+            reminderMinutes: task.reminderMinutes,
+            recurrence: task.recurrence,
+          ).then((nextTask) {
+            state = [...state, nextTask];
+            NotificationService.scheduleForTask(nextTask);
+          });
+        }
+      }
       ref.read(uncompletingTaskIdsProvider.notifier).remove(id);
       final selection = ref.read(sidebarSelectionProvider);
       final isInbox = selection is ViewSelection && selection.view == ViewType.inbox;

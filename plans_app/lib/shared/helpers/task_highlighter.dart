@@ -27,11 +27,22 @@ class TaskHighlighter {
   static final _projectRe = RegExp(r'@(\w+)', caseSensitive: false);
   static final _dateRe = RegExp(
     r'\b(?:'
-    r'today|tomorrow|tom|tmr|'
+    r'today|tod|tomorrow|tom|tmr|tmw|2moro|2morrow|'
     r'in\s+(?:(\d+)|a(?:n)?)\s*'
     r'(min|mins|minute|minutes|hour|hours|hr|hrs|day|days|week|weeks|month|months)|'
-    r'next\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)|'
-    r'(monday|tuesday|wednesday|thursday|friday|saturday|sunday)'
+    r'(?:this|next)\s+'
+    r'(mon|tue|tues|wed|thu|thur|thurs|fri|sat|sun|'
+    r'monday|tuesday|wednesday|thursday|friday|saturday|sunday)|'
+    r'(mon|tue|tues|wed|thu|thur|thurs|fri|sat|sun|'
+    r'monday|tuesday|wednesday|thursday|friday|saturday|sunday)|'
+    r'every\s+(?:\d+\s+)?(?:day|days|week|weeks|month|months|year|years)|'
+    r'(\d{1,2})/(\d{1,2})(?:/(\d{2,4}))?|'
+    r'(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|'
+    r'jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|'
+    r'nov(?:ember)?|dec(?:ember)?)\s+(\d{1,2})(?:st|nd|rd|th)?|'
+    r'(\d{1,2})(?:st|nd|rd|th)?\s+(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|'
+    r'jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|'
+    r'nov(?:ember)?|dec(?:ember)?)'
     r')\b',
     caseSensitive: false,
   );

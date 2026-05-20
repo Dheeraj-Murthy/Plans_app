@@ -26,7 +26,8 @@ fn run_migrations(conn: &Connection) -> Result<(), String> {
             project_id TEXT NOT NULL,
             created_at INTEGER NOT NULL,
             updated_at INTEGER NOT NULL,
-            sort_order INTEGER NOT NULL DEFAULT 0
+            sort_order INTEGER NOT NULL DEFAULT 0,
+            recurrence TEXT
         );
         CREATE TABLE IF NOT EXISTS projects (
             id TEXT PRIMARY KEY,
@@ -48,6 +49,8 @@ fn run_migrations(conn: &Connection) -> Result<(), String> {
     conn.execute_batch("ALTER TABLE tasks ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0;")
         .ok();
     conn.execute_batch("ALTER TABLE tasks ADD COLUMN reminder_minutes INTEGER;")
+        .ok();
+    conn.execute_batch("ALTER TABLE tasks ADD COLUMN recurrence TEXT;")
         .ok();
 
     let count: i64 = conn

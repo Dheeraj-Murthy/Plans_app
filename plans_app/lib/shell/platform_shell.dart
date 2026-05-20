@@ -117,7 +117,7 @@ class _PlatformAdaptiveShellState
       case LogicalKeyboardKey.digit2:
         ref
             .read(sidebarSelectionProvider.notifier)
-            .select(const ViewSelection(ViewType.today));
+            .select(const ViewSelection(ViewType.timeline));
         return true;
       case LogicalKeyboardKey.digit3:
         ref
@@ -202,6 +202,7 @@ class _MobileShell extends ConsumerWidget {
     final title = switch (selection) {
       ViewSelection(:final view) => switch (view) {
           ViewType.inbox => 'Inbox',
+          ViewType.timeline => 'Timeline',
           ViewType.today => 'Today',
           ViewType.completed => 'Completed',
         },
@@ -211,7 +212,7 @@ class _MobileShell extends ConsumerWidget {
 
     final navIndex = switch (selection) {
       ViewSelection(view: ViewType.inbox) => 0,
-      ViewSelection(view: ViewType.today) => 1,
+      ViewSelection(view: ViewType.timeline) => 1,
       ViewSelection(view: ViewType.completed) => 2,
       _ => 0,
     };
@@ -281,7 +282,7 @@ class _MobileShell extends ConsumerWidget {
             case 1:
               ref
                   .read(sidebarSelectionProvider.notifier)
-                  .select(const ViewSelection(ViewType.today));
+                  .select(const ViewSelection(ViewType.timeline));
             case 2:
               ref
                   .read(sidebarSelectionProvider.notifier)
@@ -294,8 +295,8 @@ class _MobileShell extends ConsumerWidget {
             label: 'Inbox',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.calendar_today_rounded),
-            label: 'Today',
+            icon: Icon(Icons.calendar_month_rounded),
+            label: 'Timeline',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.check_circle_outline_rounded),
@@ -314,7 +315,7 @@ class _MobileDrawer extends ConsumerWidget {
     final SidebarSelection selection = ref.watch(sidebarSelectionProvider);
     final totalTasks =
         ref.watch(tasksProvider).where((t) => !t.isCompleted).length;
-    final todayCount = ref.watch(todayCountProvider);
+    final timelineCount = ref.watch(timelineCountProvider);
     final completedCount = ref.watch(completedCountProvider);
 
     void close() => Navigator.of(context).pop();
@@ -353,15 +354,15 @@ class _MobileDrawer extends ConsumerWidget {
               },
             ),
             SidebarItem(
-              icon: Icons.calendar_today_rounded,
-              label: 'Today',
-              count: todayCount,
+              icon: Icons.calendar_month_rounded,
+              label: 'Timeline',
+              count: timelineCount,
               isActive: selection is ViewSelection &&
-                  selection.view == ViewType.today,
+                  selection.view == ViewType.timeline,
               onTap: () {
                 ref
                     .read(sidebarSelectionProvider.notifier)
-                    .select(const ViewSelection(ViewType.today));
+                    .select(const ViewSelection(ViewType.timeline));
                 close();
               },
             ),

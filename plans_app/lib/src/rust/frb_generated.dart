@@ -67,7 +67,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.12.0';
 
   @override
-  int get rustContentHash => -1388727617;
+  int get rustContentHash => 2134817197;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -93,6 +93,7 @@ abstract class RustLibApi extends BaseApi {
     required PlatformInt64 priority,
     required String projectId,
     PlatformInt64? reminderMinutes,
+    String? recurrence,
   });
 
   Future<void> crateApiProjectsDeleteProject({required String id});
@@ -107,6 +108,8 @@ abstract class RustLibApi extends BaseApi {
 
   Future<void> crateApiTasksReorderTasks({required List<String> taskIds});
 
+  Future<void> crateApiTasksRestoreTask({required String id});
+
   Future<Project> crateApiProjectsUpdateProject({
     required String id,
     required String name,
@@ -114,8 +117,6 @@ abstract class RustLibApi extends BaseApi {
   });
 
   Future<Task> crateApiTasksUpdateTask({required String taskJson});
-
-  Future<void> crateApiTasksRestoreTask({required String id});
 }
 
 class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
@@ -196,6 +197,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     required PlatformInt64 priority,
     required String projectId,
     PlatformInt64? reminderMinutes,
+    String? recurrence,
   }) {
     return handler.executeNormal(
       NormalTask(
@@ -207,6 +209,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_i_64(priority, serializer);
           sse_encode_String(projectId, serializer);
           sse_encode_opt_box_autoadd_i_64(reminderMinutes, serializer);
+          sse_encode_opt_String(recurrence, serializer);
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
@@ -219,7 +222,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           decodeErrorData: sse_decode_String,
         ),
         constMeta: kCrateApiTasksCreateTaskConstMeta,
-        argValues: [title, description, dueDate, priority, projectId, reminderMinutes],
+        argValues: [
+          title,
+          description,
+          dueDate,
+          priority,
+          projectId,
+          reminderMinutes,
+          recurrence,
+        ],
         apiImpl: this,
       ),
     );
@@ -227,7 +238,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   TaskConstMeta get kCrateApiTasksCreateTaskConstMeta => const TaskConstMeta(
     debugName: "create_task",
-    argNames: ["title", "description", "dueDate", "priority", "projectId", "reminderMinutes"],
+    argNames: [
+      "title",
+      "description",
+      "dueDate",
+      "priority",
+      "projectId",
+      "reminderMinutes",
+      "recurrence",
+    ],
   );
 
   @override
@@ -397,6 +416,34 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "reorder_tasks", argNames: ["taskIds"]);
 
   @override
+  Future<void> crateApiTasksRestoreTask({required String id}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(id, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 10,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiTasksRestoreTaskConstMeta,
+        argValues: [id],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiTasksRestoreTaskConstMeta =>
+      const TaskConstMeta(debugName: "restore_task", argNames: ["id"]);
+
+  @override
   Future<Project> crateApiProjectsUpdateProject({
     required String id,
     required String name,
@@ -412,7 +459,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 10,
+            funcId: 11,
             port: port_,
           );
         },
@@ -443,7 +490,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 11,
+            funcId: 12,
             port: port_,
           );
         },
@@ -460,34 +507,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   TaskConstMeta get kCrateApiTasksUpdateTaskConstMeta =>
       const TaskConstMeta(debugName: "update_task", argNames: ["taskJson"]);
-
-  @override
-  Future<void> crateApiTasksRestoreTask({required String id}) {
-    return handler.executeNormal(
-      NormalTask(
-        callFfi: (port_) {
-          final serializer = SseSerializer(generalizedFrbRustBinding);
-          sse_encode_String(id, serializer);
-          pdeCallFfi(
-            generalizedFrbRustBinding,
-            serializer,
-            funcId: 12,
-            port: port_,
-          );
-        },
-        codec: SseCodec(
-          decodeSuccessData: sse_decode_unit,
-          decodeErrorData: sse_decode_String,
-        ),
-        constMeta: kCrateApiTasksRestoreTaskConstMeta,
-        argValues: [id],
-        apiImpl: this,
-      ),
-    );
-  }
-
-  TaskConstMeta get kCrateApiTasksRestoreTaskConstMeta =>
-      const TaskConstMeta(debugName: "restore_task", argNames: ["id"]);
 
   @protected
   String dco_decode_String(dynamic raw) {
@@ -566,8 +585,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   Task dco_decode_task(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 11)
-      throw Exception('unexpected arr length: expect 11 but see ${arr.length}');
+    if (arr.length != 12)
+      throw Exception('unexpected arr length: expect 12 but see ${arr.length}');
     return Task(
       id: dco_decode_String(arr[0]),
       title: dco_decode_String(arr[1]),
@@ -580,6 +599,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       updatedAt: dco_decode_i_64(arr[8]),
       sortOrder: dco_decode_i_64(arr[9]),
       reminderMinutes: dco_decode_opt_box_autoadd_i_64(arr[10]),
+      recurrence: dco_decode_opt_String(arr[11]),
     );
   }
 
@@ -708,6 +728,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_updatedAt = sse_decode_i_64(deserializer);
     var var_sortOrder = sse_decode_i_64(deserializer);
     var var_reminderMinutes = sse_decode_opt_box_autoadd_i_64(deserializer);
+    var var_recurrence = sse_decode_opt_String(deserializer);
     return Task(
       id: var_id,
       title: var_title,
@@ -720,6 +741,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       updatedAt: var_updatedAt,
       sortOrder: var_sortOrder,
       reminderMinutes: var_reminderMinutes,
+      recurrence: var_recurrence,
     );
   }
 
@@ -849,6 +871,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_i_64(self.updatedAt, serializer);
     sse_encode_i_64(self.sortOrder, serializer);
     sse_encode_opt_box_autoadd_i_64(self.reminderMinutes, serializer);
+    sse_encode_opt_String(self.recurrence, serializer);
   }
 
   @protected

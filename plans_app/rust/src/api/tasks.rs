@@ -5,7 +5,7 @@ use uuid::Uuid;
 pub fn get_all_tasks() -> Result<Vec<Task>, String> {
     db::with_db(|conn| {
         let mut stmt = conn
-            .prepare("SELECT id, title, description, due_date, priority, is_completed, project_id, created_at, updated_at, sort_order, reminder_minutes FROM tasks WHERE is_deleted = 0 ORDER BY sort_order ASC")
+            .prepare("SELECT id, title, description, due_date, priority, is_completed, project_id, created_at, updated_at, sort_order, reminder_minutes, recurrence FROM tasks WHERE is_deleted = 0 ORDER BY sort_order ASC")
             .map_err(|e| e.to_string())?;
         let rows = stmt
             .query_map([], |row| {
@@ -21,6 +21,7 @@ pub fn get_all_tasks() -> Result<Vec<Task>, String> {
                     updated_at: row.get(8)?,
                     sort_order: row.get(9)?,
                     reminder_minutes: row.get(10)?,
+                    recurrence: row.get(11)?,
                 })
             })
             .map_err(|e| e.to_string())?;
@@ -39,6 +40,7 @@ pub fn create_task(
     priority: i64,
     project_id: String,
     reminder_minutes: Option<i64>,
+    recurrence: Option<String>,
 ) -> Result<Task, String> {
     let id = Uuid::new_v4().to_string();
     let now = chrono::Utc::now().timestamp_millis();
@@ -59,10 +61,11 @@ pub fn create_task(
             updated_at: now,
             sort_order,
             reminder_minutes,
+            recurrence,
         };
         conn.execute(
-            "INSERT INTO tasks (id, title, description, due_date, priority, is_completed, project_id, created_at, updated_at, sort_order, reminder_minutes) VALUES (?1, ?2, ?3, ?4, ?5, 0, ?6, ?7, ?8, ?9, ?10)",
-            rusqlite::params![task.id, task.title, task.description, task.due_date, task.priority, task.project_id, task.created_at, task.updated_at, task.sort_order, task.reminder_minutes],
+            "INSERT INTO tasks (id, title, description, due_date, priority, is_completed, project_id, created_at, updated_at, sort_order, reminder_minutes, recurrence) VALUES (?1, ?2, ?3, ?4, ?5, 0, ?6, ?7, ?8, ?9, ?10, ?11)",
+            rusqlite::params![task.id, task.title, task.description, task.due_date, task.priority, task.project_id, task.created_at, task.updated_at, task.sort_order, task.reminder_minutes, task.recurrence],
         )
         .map_err(|e| e.to_string())?;
         Ok(task)
@@ -73,8 +76,8 @@ pub fn update_task(task_json: String) -> Result<Task, String> {
     let task: Task = serde_json::from_str(&task_json).map_err(|e| e.to_string())?;
     db::with_db(|conn| {
         conn.execute(
-            "UPDATE tasks SET title=?1, description=?2, due_date=?3, priority=?4, is_completed=?5, project_id=?6, updated_at=?7, sort_order=?9, reminder_minutes=?10 WHERE id=?8",
-            rusqlite::params![task.title, task.description, task.due_date, task.priority, task.is_completed as i64, task.project_id, chrono::Utc::now().timestamp_millis(), task.id, task.sort_order, task.reminder_minutes],
+            "UPDATE tasks SET title=?1, description=?2, due_date=?3, priority=?4, is_completed=?5, project_id=?6, updated_at=?7, sort_order=?9, reminder_minutes=?10, recurrence=?11 WHERE id=?8",
+            rusqlite::params![task.title, task.description, task.due_date, task.priority, task.is_completed as i64, task.project_id, chrono::Utc::now().timestamp_millis(), task.id, task.sort_order, task.reminder_minutes, task.recurrence],
         )
         .map_err(|e| e.to_string())?;
         Ok(task)

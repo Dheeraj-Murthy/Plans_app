@@ -275,25 +275,31 @@ class PlansAppWidgetProvider : HomeWidgetProvider() {
                     views.setOnClickPendingIntent(titleId, titlePi)
 
                     if (dueDate > 0) {
-                        val dueText = formatDueDate(dueDate)
-                        val projectName = if (isMultiProject) lookupProjectName(widgetData, taskObj.optString("project_id", "")) else null
-                        val displayText = if (projectName != null) "$dueText · $projectName" else dueText
+                        val dateLabel = formatDueDate(dueDate)
+                        val timeStr = if (_hasTime(dueDate)) formatTime(dueDate) else null
+                        val dueText = if (timeStr != null) "$dateLabel $timeStr" else dateLabel
+                        val projectInfo = if (isMultiProject) lookupProjectInfo(widgetData, taskObj.optString("project_id", "")) else null
+                        val displayText = if (projectInfo != null) "$dueText · ${projectInfo.name}" else dueText
                         views.setTextViewText(dueId, displayText)
                         views.setViewVisibility(dueId, android.view.View.VISIBLE)
+                        views.setInt(dueId, "setBackgroundResource", R.drawable.widget_pill_bg)
                         val isOverdue = dueDate < now && !isCompleted && view != VIEW_COMPLETED
                         if (isOverdue) {
                             views.setTextColor(dueId, OVERDUE_COLOR)
+                        } else if (projectInfo != null) {
+                            views.setTextColor(dueId, colorForProjectIndex(projectInfo.colorIndex))
                         } else {
                             views.setTextColor(dueId, 0xFF888888.toInt())
                         }
-                        views.setContentDescription(dueId, "Due $dueText${if (projectName != null) ", $projectName" else ""}")
+                        views.setContentDescription(dueId, "Due $dueText${if (projectInfo != null) ", ${projectInfo.name}" else ""}")
                     } else if (isMultiProject) {
-                        val projectName = lookupProjectName(widgetData, taskObj.optString("project_id", ""))
-                        if (projectName != null) {
-                            views.setTextViewText(dueId, projectName)
-                            views.setTextColor(dueId, 0xFF666666.toInt())
+                        val projectInfo = lookupProjectInfo(widgetData, taskObj.optString("project_id", ""))
+                        if (projectInfo != null) {
+                            views.setTextViewText(dueId, projectInfo.name)
+                            views.setTextColor(dueId, colorForProjectIndex(projectInfo.colorIndex))
                             views.setViewVisibility(dueId, android.view.View.VISIBLE)
-                            views.setContentDescription(dueId, projectName)
+                            views.setInt(dueId, "setBackgroundResource", R.drawable.widget_pill_bg)
+                            views.setContentDescription(dueId, projectInfo.name)
                         } else {
                             views.setViewVisibility(dueId, android.view.View.GONE)
                         }
@@ -404,17 +410,23 @@ class PlansAppWidgetProvider : HomeWidgetProvider() {
             return views
         }
 
-        private fun lookupProjectName(widgetData: SharedPreferences, projectId: String): String? {
+        private data class ProjectInfo(val name: String, val colorIndex: Int)
+
+        private fun lookupProjectInfo(widgetData: SharedPreferences, projectId: String): ProjectInfo? {
             if (projectId == "default") return null
             val projectsJson = widgetData.getString("widget_projects", "[]") ?: "[]"
             val projects = JSONArray(projectsJson)
             for (i in 0 until projects.length()) {
                 val p = projects.optJSONObject(i) ?: continue
                 if (p.optString("id", "") == projectId) {
-                    return p.getString("name")
+                    return ProjectInfo(p.getString("name"), p.optInt("color_index", 0))
                 }
             }
             return null
+        }
+
+        private fun lookupProjectName(widgetData: SharedPreferences, projectId: String): String? {
+            return lookupProjectInfo(widgetData, projectId)?.name
         }
 
         private fun getViewDisplayName(widgetData: SharedPreferences, view: String): String {
@@ -442,14 +454,33 @@ class PlansAppWidgetProvider : HomeWidgetProvider() {
             }
         }
 
+        private fun colorForProjectIndex(index: Int): Int {
+            return when (index % 5) {
+                0 -> 0xFF7C6DF2.toInt()
+                1 -> 0xFFE45C5C.toInt()
+                2 -> 0xFF3CAE7C.toInt()
+                3 -> 0xFFE8943A.toInt()
+                else -> 0xFF5E8AE4.toInt()
+            }
+        }
+
+        private fun _hasTime(epochMillis: Long): Boolean {
+            val cal = Calendar.getInstance().apply { timeInMillis = epochMillis }
+            return cal.get(Calendar.HOUR_OF_DAY) != 0 || cal.get(Calendar.MINUTE) != 0
+        }
+
+        private fun formatTime(epochMillis: Long): String {
+            val cal = Calendar.getInstance().apply { timeInMillis = epochMillis }
+            return SimpleDateFormat("h:mm a", Locale.getDefault()).format(cal.time)
+        }
+
         private fun formatDueDate(epochMillis: Long): String {
             val cal = Calendar.getInstance().apply { timeInMillis = epochMillis }
             val now = Calendar.getInstance()
             val tomorrow = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, 1) }
             return when {
                 cal.get(Calendar.DAY_OF_YEAR) == now.get(Calendar.DAY_OF_YEAR) &&
-                    cal.get(Calendar.YEAR) == now.get(Calendar.YEAR) ->
-                    SimpleDateFormat("'Today' h:mm a", Locale.getDefault()).format(cal.time)
+                    cal.get(Calendar.YEAR) == now.get(Calendar.YEAR) -> "Today"
                 cal.get(Calendar.DAY_OF_YEAR) == tomorrow.get(Calendar.DAY_OF_YEAR) &&
                     cal.get(Calendar.YEAR) == tomorrow.get(Calendar.YEAR) -> "Tomorrow"
                 else -> SimpleDateFormat("MMM d", Locale.getDefault()).format(cal.time)

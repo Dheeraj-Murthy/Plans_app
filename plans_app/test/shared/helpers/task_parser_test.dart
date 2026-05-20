@@ -297,6 +297,210 @@ void main() {
     });
   });
 
+  group('Short day names', () {
+    test('mon → next monday', () {
+      // Tue May 19 → next Mon May 25
+      final r = TaskParser.parse('meeting mon', projects, now: now);
+      expect(r.dueDate!.day, 25);
+      expect(r.title, 'meeting');
+    });
+
+    test('tue → this tuesday (today since now is Tuesday)', () {
+      final r = TaskParser.parse('call tue', projects, now: now);
+      expect(r.dueDate!.day, 19);
+    });
+
+    test('tues → tuesday', () {
+      final r = TaskParser.parse('call tues', projects, now: now);
+      expect(r.dueDate!.day, 19);
+    });
+
+    test('wed → this wednesday', () {
+      // Tue May 19 → Wed May 20
+      final r = TaskParser.parse('shop wed', projects, now: now);
+      expect(r.dueDate!.day, 20);
+    });
+
+    test('thu → this thursday', () {
+      // Tue May 19 → Thu May 21
+      final r = TaskParser.parse('plan thu', projects, now: now);
+      expect(r.dueDate!.day, 21);
+    });
+
+    test('thur → thursday', () {
+      final r = TaskParser.parse('plan thur', projects, now: now);
+      expect(r.dueDate!.day, 21);
+    });
+
+    test('thurs → thursday', () {
+      final r = TaskParser.parse('plan thurs', projects, now: now);
+      expect(r.dueDate!.day, 21);
+    });
+
+    test('fri → this friday', () {
+      // Tue May 19 → Fri May 22
+      final r = TaskParser.parse('party fri', projects, now: now);
+      expect(r.dueDate!.day, 22);
+    });
+
+    test('sat → this saturday', () {
+      // Tue May 19 → Sat May 23
+      final r = TaskParser.parse('rest sat', projects, now: now);
+      expect(r.dueDate!.day, 23);
+    });
+
+    test('sun → this sunday', () {
+      // Tue May 19 → Sun May 24
+      final r = TaskParser.parse('brunch sun', projects, now: now);
+      expect(r.dueDate!.day, 24);
+    });
+  });
+
+  group('this <day>', () {
+    test('this wed → this wednesday', () {
+      // Tue May 19 → Wed May 20
+      final r = TaskParser.parse('meet this wed', projects, now: now);
+      expect(r.dueDate!.day, 20);
+    });
+
+    test('this thu → this thursday', () {
+      // Tue May 19 → Thu May 21
+      final r = TaskParser.parse('plan this thu', projects, now: now);
+      expect(r.dueDate!.day, 21);
+    });
+
+    test('this mon → next monday', () {
+      // Tue May 19 → next Mon May 25
+      final r = TaskParser.parse('ship this mon', projects, now: now);
+      expect(r.dueDate!.day, 25);
+    });
+
+    test('this with full name', () {
+      final r = TaskParser.parse('test this friday', projects, now: now);
+      expect(r.dueDate!.day, 22);
+    });
+  });
+
+  group('Extra keyword aliases', () {
+    test('tod → today', () {
+      final r = TaskParser.parse('buy milk tod', projects, now: now);
+      expect(r.hasDueDate, true);
+      expect(r.dueDate!.day, now.day);
+      expect(r.dueDate!.hour, now.hour);
+    });
+
+    test('tmw → tomorrow', () {
+      final r = TaskParser.parse('call tmw', projects, now: now);
+      expect(r.dueDate!.day, now.day + 1);
+    });
+
+    test('2moro → tomorrow', () {
+      final r = TaskParser.parse('party 2moro', projects, now: now);
+      expect(r.dueDate!.day, now.day + 1);
+    });
+
+    test('2morrow → tomorrow', () {
+      final r = TaskParser.parse('meet 2morrow', projects, now: now);
+      expect(r.dueDate!.day, now.day + 1);
+    });
+  });
+
+  group('Numeric date DD/MM', () {
+    test('21/05 → 21st May', () {
+      final r = TaskParser.parse('meet 21/05', projects, now: now);
+      expect(r.dueDate!.day, 21);
+      expect(r.dueDate!.month, 5);
+      expect(r.dueDate!.year, 2026);
+    });
+
+    test('21/05 with time → 21st May at given time', () {
+      final r = TaskParser.parse('meet 21/05 at 3pm', projects, now: now);
+      expect(r.dueDate!.day, 21);
+      expect(r.dueDate!.month, 5);
+      expect(r.dueDate!.hour, 15);
+    });
+
+    test('1/6 → 1st June (in future)', () {
+      final r = TaskParser.parse('event 1/6', projects, now: now);
+      expect(r.dueDate!.day, 1);
+      expect(r.dueDate!.month, 6);
+      expect(r.dueDate!.year, 2026);
+    });
+
+    test('1/1 → 1st January (in past, advances to next year)', () {
+      final r = TaskParser.parse('party 1/1', projects, now: now);
+      expect(r.dueDate!.day, 1);
+      expect(r.dueDate!.month, 1);
+      expect(r.dueDate!.year, 2027);
+    });
+
+    test('21/05/2026 with explicit year', () {
+      final r = TaskParser.parse('launch 21/05/2026', projects, now: now);
+      expect(r.dueDate!.day, 21);
+      expect(r.dueDate!.month, 5);
+      expect(r.dueDate!.year, 2026);
+    });
+
+    test('21/05/26 with 2-digit year', () {
+      final r = TaskParser.parse('launch 21/05/26', projects, now: now);
+      expect(r.dueDate!.year, 2026);
+    });
+
+    test('invalid month ignored', () {
+      final r = TaskParser.parse('version 13/13', projects, now: now);
+      expect(r.hasDueDate, false);
+      expect(r.title, 'version 13/13');
+    });
+
+    test('invalid day ignored', () {
+      final r = TaskParser.parse('day 32/05', projects, now: now);
+      expect(r.hasDueDate, false);
+    });
+  });
+
+  group('Text date (month DD / DD month)', () {
+    test('may 21 → 21st May', () {
+      final r = TaskParser.parse('meet may 21', projects, now: now);
+      expect(r.dueDate!.day, 21);
+      expect(r.dueDate!.month, 5);
+    });
+
+    test('21 may → 21st May', () {
+      final r = TaskParser.parse('meet 21 may', projects, now: now);
+      expect(r.dueDate!.day, 21);
+      expect(r.dueDate!.month, 5);
+    });
+
+    test('may 21st with ordinal suffix', () {
+      final r = TaskParser.parse('party may 21st', projects, now: now);
+      expect(r.dueDate!.day, 21);
+    });
+
+    test('21st may with ordinal suffix reversed', () {
+      final r = TaskParser.parse('party 21st may', projects, now: now);
+      expect(r.dueDate!.day, 21);
+    });
+
+    test('jun 1 → 1st June', () {
+      final r = TaskParser.parse('start jun 1', projects, now: now);
+      expect(r.dueDate!.day, 1);
+      expect(r.dueDate!.month, 6);
+    });
+
+    test('1 jan → 1st January (past → next year)', () {
+      final r = TaskParser.parse('resolution 1 jan', projects, now: now);
+      expect(r.dueDate!.day, 1);
+      expect(r.dueDate!.month, 1);
+      expect(r.dueDate!.year, 2027);
+    });
+
+    test('august 15', () {
+      final r = TaskParser.parse('holiday august 15', projects, now: now);
+      expect(r.dueDate!.day, 15);
+      expect(r.dueDate!.month, 8);
+    });
+  });
+
   group('Default reminder', () {
     test('hasDueDate sets defaultReminderMinutes = 0', () {
       final r = TaskParser.parse('task tomorrow', projects, now: now);
@@ -424,6 +628,70 @@ void main() {
       final r = TaskParser.parse('meet at 5.00', projects, now: now);
       expect(r.dueDate!.hour, 17);
       expect(r.dueDate!.minute, 0);
+    });
+  });
+
+  group('Recurrence', () {
+    test('every day → daily|1 + dueDate today', () {
+      final r = TaskParser.parse('buy milk every day', projects, now: now);
+      expect(r.recurrence, 'daily|1');
+      expect(r.dueDate, isNotNull);
+      expect(r.dueDate!.year, now.year);
+      expect(r.dueDate!.month, now.month);
+      expect(r.dueDate!.day, now.day);
+      expect(r.title, 'buy milk');
+    });
+
+    test('every week → weekly|1', () {
+      final r = TaskParser.parse('standup every week', projects, now: now);
+      expect(r.recurrence, 'weekly|1');
+      expect(r.title, 'standup');
+    });
+
+    test('every month → monthly|1', () {
+      final r = TaskParser.parse('review every month', projects, now: now);
+      expect(r.recurrence, 'monthly|1');
+    });
+
+    test('every year → yearly|1', () {
+      final r = TaskParser.parse('audit every year', projects, now: now);
+      expect(r.recurrence, 'yearly|1');
+    });
+
+    test('every 2 days → daily|2', () {
+      final r = TaskParser.parse('water plants every 2 days', projects, now: now);
+      expect(r.recurrence, 'daily|2');
+    });
+
+    test('every 3 weeks → weekly|3', () {
+      final r = TaskParser.parse('report every 3 weeks', projects, now: now);
+      expect(r.recurrence, 'weekly|3');
+    });
+
+    test('every day with explicit date → date wins', () {
+      final r = TaskParser.parse('every day tomorrow', projects, now: now);
+      expect(r.recurrence, 'daily|1');
+      expect(r.dueDate, isNotNull);
+      expect(r.dueDate!.day, now.day + 1);
+    });
+
+    test('bare every without day/week etc → not parsed', () {
+      final r = TaskParser.parse('every single thing', projects, now: now);
+      expect(r.recurrence, isNull);
+      expect(r.title, 'every single thing');
+    });
+
+    test('every day with p1 priority', () {
+      final r = TaskParser.parse('p1 every day', projects, now: now);
+      expect(r.priority, TaskPriority.high);
+      expect(r.recurrence, 'daily|1');
+    });
+
+    test('every day does not set hasDueDate when no explicit date', () {
+      final r = TaskParser.parse('brush teeth every day', projects, now: now);
+      expect(r.recurrence, 'daily|1');
+      expect(r.dueDate, isNotNull);
+      expect(r.hasDueDate, true);
     });
   });
 

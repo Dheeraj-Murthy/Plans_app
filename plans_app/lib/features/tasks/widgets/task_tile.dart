@@ -14,8 +14,20 @@ import '../../../shared/widgets/priority_dot.dart';
 class TaskTile extends ConsumerStatefulWidget {
   final Task task;
   final int index;
+  final bool showTime;
+  final bool showFullDate;
+  final String? projectName;
+  final Color? projectColor;
 
-  const TaskTile({super.key, required this.task, required this.index});
+  const TaskTile({
+    super.key,
+    required this.task,
+    required this.index,
+    this.showTime = false,
+    this.showFullDate = false,
+    this.projectName,
+    this.projectColor,
+  });
 
   @override
   ConsumerState<TaskTile> createState() => _TaskTileState();
@@ -24,8 +36,13 @@ class TaskTile extends ConsumerStatefulWidget {
 class _TaskTileState extends ConsumerState<TaskTile> {
   bool _isHovered = false;
 
+  static const _months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
   String _formatDueDate(DateTime? date) {
     if (date == null) return '';
+    if (widget.showFullDate) {
+      return '${_months[date.month - 1]} ${date.day}';
+    }
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final due = DateTime(date.year, date.month, date.day);
@@ -38,6 +55,17 @@ class _TaskTileState extends ConsumerState<TaskTile> {
       _ => '${date.month}/${date.day}',
     };
   }
+
+  String _formatTime(DateTime date) {
+    final h = date.hour;
+    final m = date.minute;
+    final ampm = h >= 12 ? 'PM' : 'AM';
+    final h12 = h == 0 ? 12 : (h > 12 ? h - 12 : h);
+    return '$h12:${m.toString().padLeft(2, '0')} $ampm';
+  }
+
+  bool get _hasTime => widget.task.dueDate != null &&
+      (widget.task.dueDate!.hour != 0 || widget.task.dueDate!.minute != 0);
 
   bool get _isOverdue {
     final due = widget.task.dueDate;
@@ -271,31 +299,79 @@ class _TaskTileState extends ConsumerState<TaskTile> {
                           child: PriorityDot(priority: task.priority),
                         ),
 
-                      // Due date pill
-                      if (task.dueDate != null && !task.isCompleted)
-                        AnimatedOpacity(
-                          duration: AppAnimations.fast,
-                          opacity: _isHovered ? 0 : 1,
+                      // Project pill
+                      if (widget.projectName != null && !task.isCompleted)
+                        Padding(
+                          padding: const EdgeInsets.only(right: 8),
                           child: Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 6,
                               vertical: 2,
                             ),
                             decoration: BoxDecoration(
-                              color: _isOverdue
-                                  ? AppColors.danger.withValues(alpha: 0.12)
-                                  : AppColors.surface,
+                              color: widget.projectColor!.withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
-                              _formatDueDate(task.dueDate),
+                              widget.projectName!,
                               style: AppTypography.label.copyWith(
                                 fontSize: 11,
-                                color: _isOverdue
-                                    ? AppColors.danger
-                                    : AppColors.textMuted,
+                                color: widget.projectColor,
                               ),
                             ),
+                          ),
+                        ),
+
+                      // Due date pill
+                      if (task.dueDate != null && !task.isCompleted)
+                        AnimatedOpacity(
+                          duration: AppAnimations.fast,
+                          opacity: _isHovered ? 0 : 1,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: _isOverdue
+                                      ? AppColors.danger.withValues(alpha: 0.12)
+                                      : AppColors.surface,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  _formatDueDate(task.dueDate),
+                                  style: AppTypography.label.copyWith(
+                                    fontSize: 11,
+                                    color: _isOverdue
+                                        ? AppColors.danger
+                                        : AppColors.textMuted,
+                                  ),
+                                ),
+                              ),
+                              if (widget.showTime && _hasTime) ...[
+                                const SizedBox(width: 4),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.accent.withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    _formatTime(task.dueDate!),
+                                    style: AppTypography.label.copyWith(
+                                      fontSize: 11,
+                                      color: AppColors.accent,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
                         ),
 
