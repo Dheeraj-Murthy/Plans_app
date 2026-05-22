@@ -12,3 +12,5 @@ GeneratedPluginRegistrant.java
 key.properties
 **/*.keystore
 **/*.jks
+# Our CI signing keystore is intentionally committed for reproducible builds.
+!app/upload.keystore
