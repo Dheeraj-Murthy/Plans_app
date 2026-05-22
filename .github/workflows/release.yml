@@ -86,7 +86,7 @@ jobs:
       - name: Package .app
         run: |
           cd build/macos/Build/Products/Release
-          ditto -c -k --sequestRsa --keepParent Plans.app Plans.zip
+          ditto -c -k --keepParent Plans.app Plans.zip
 
       - uses: actions/upload-artifact@v4
         with:
