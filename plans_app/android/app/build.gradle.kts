@@ -20,6 +20,15 @@ android {
         jvmTarget = JavaVersion.VERSION_17.toString()
     }
 
+    signingConfigs {
+        create("release") {
+            storeFile = file("upload.keystore")
+            storePassword = "PlansApp2026"
+            keyAlias = "plans-app-key"
+            keyPassword = "PlansApp2026"
+        }
+    }
+
     defaultConfig {
         applicationId = "com.plansapp"
         minSdk = flutter.minSdkVersion
@@ -30,7 +39,7 @@ android {
 
     buildTypes {
         release {
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 }
