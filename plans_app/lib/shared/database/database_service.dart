@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:plans_app/src/rust/api.dart' as rust_api;
 import 'package:plans_app/src/rust/api/tasks.dart' as rust_tasks;
 import 'package:plans_app/src/rust/api/projects.dart' as rust_projects;
 import 'package:plans_app/src/rust/models.dart' as rust_models;
@@ -105,6 +107,11 @@ class DatabaseService {
       debugPrint('DatabaseService.clearCompleted failed: $e');
       rethrow;
     }
+  }
+
+  Future<void> restart() async {
+    final dir = await getApplicationDocumentsDirectory();
+    await rust_api.initDatabase(path: '${dir.path}/plans.db');
   }
 
   Future<List<Project>> getProjects() async {
