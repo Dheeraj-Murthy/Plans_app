@@ -77,14 +77,6 @@ class AppTheme {
           thickness: 1,
           space: 0,
         ),
-        pageTransitionsTheme: const PageTransitionsTheme(
-          builders: {
-            TargetPlatform.android: CupertinoPageTransitionsBuilder(),
-            TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
-            TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
-            TargetPlatform.linux: CupertinoPageTransitionsBuilder(),
-            TargetPlatform.windows: CupertinoPageTransitionsBuilder(),
-          },
-        ),
+
       );
 }
