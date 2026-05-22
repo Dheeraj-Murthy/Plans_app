@@ -32,7 +32,7 @@ class _PlatformAdaptiveShellState
   @override
   void initState() {
     super.initState();
-    if (!kIsWeb && Platform.isMacOS) {
+    if (!kIsWeb && (Platform.isMacOS || Platform.isLinux || Platform.isWindows)) {
       HardwareKeyboard.instance.addHandler(_handleKeyEvent);
     }
     if (!kIsWeb && Platform.isAndroid) {
@@ -63,7 +63,8 @@ class _PlatformAdaptiveShellState
   }
 
   void _openAddTask() {
-    if (!Platform.isAndroid) {
+    final isDesktop = !kIsWeb && (Platform.isMacOS || Platform.isLinux || Platform.isWindows);
+    if (isDesktop) {
       ref.read(composerFocusRequestProvider.notifier).request();
       return;
     }
@@ -92,7 +93,7 @@ class _PlatformAdaptiveShellState
 
   @override
   void dispose() {
-    if (!kIsWeb && Platform.isMacOS) {
+    if (!kIsWeb && (Platform.isMacOS || Platform.isLinux || Platform.isWindows)) {
       HardwareKeyboard.instance.removeHandler(_handleKeyEvent);
     }
     super.dispose();
@@ -100,7 +101,10 @@ class _PlatformAdaptiveShellState
 
   bool _handleKeyEvent(KeyEvent event) {
     if (event is! KeyDownEvent) return false;
-    if (!HardwareKeyboard.instance.isMetaPressed) return false;
+    final isModifier = Platform.isMacOS
+        ? HardwareKeyboard.instance.isMetaPressed
+        : HardwareKeyboard.instance.isControlPressed;
+    if (!isModifier) return false;
 
     switch (event.logicalKey) {
       case LogicalKeyboardKey.keyN:
@@ -169,7 +173,8 @@ class _PlatformAdaptiveShellState
       );
     });
 
-    if (!kIsWeb && Platform.isMacOS) {
+    final isDesktop = !kIsWeb && (Platform.isMacOS || Platform.isLinux || Platform.isWindows);
+    if (isDesktop) {
       return _DesktopShell();
     }
     return _MobileShell();

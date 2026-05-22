@@ -58,6 +58,17 @@ add_subdirectory("runner")
 include(flutter/generated_plugins.cmake)
 
 
+# === Rust native library (plans_core) ===
+set(RUST_LIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../rust/target/release")
+set(RUST_LIB "${RUST_LIB_DIR}/plans_core.dll")
+if(EXISTS ${RUST_LIB})
+  list(APPEND PLUGIN_BUNDLED_LIBRARIES ${RUST_LIB})
+  message(STATUS "Plans Rust library: ${RUST_LIB}")
+else()
+  message(WARNING "Plans Rust library NOT found at ${RUST_LIB}. Run 'bash rust/build_windows.sh' first.")
+endif()
+
+
 # === Installation ===
 # Support files are copied into place next to the executable, so that it can
 # run in place. This is done instead of making a separate bundle (as on Linux)

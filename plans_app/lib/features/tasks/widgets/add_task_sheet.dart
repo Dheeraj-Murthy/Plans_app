@@ -352,6 +352,7 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
         const PopupMenuItem(value: '', child: Text('Never')),
         const PopupMenuItem(value: 'daily|1', child: Text('Daily')),
         const PopupMenuItem(value: 'weekly|1', child: Text('Weekly')),
+        const PopupMenuItem(value: 'weekly|1|weekdays', child: Text('Weekdays')),
         const PopupMenuItem(value: 'monthly|1', child: Text('Monthly')),
         const PopupMenuItem(value: 'yearly|1', child: Text('Yearly')),
       ],

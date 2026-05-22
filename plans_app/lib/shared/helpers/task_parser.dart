@@ -117,10 +117,69 @@ class TaskParser {
     String text,
     void Function(String) set,
   ) {
-    final m = RegExp(
+    // Check weekday-specific patterns first (before the generic interval pattern)
+    final weekdayRe = RegExp(
+      r'\bevery\s+(?:'
+      r'(weekdays?)'
+      r')\b',
+      caseSensitive: false,
+    );
+    var m = weekdayRe.firstMatch(text);
+    if (m != null) {
+      set('weekly|1|weekdays');
+      return text.replaceFirst(m.group(0)!, '').trim();
+    }
+
+    // Multi-day: every mon/wed/fri, every monday/tuesday
+    final multiDayRe = RegExp(
+      r'\bevery\s+'
+      r'(mon|tue|tues|wed|thu|thur|thurs|fri|sat|sun|'
+      r'monday|tuesday|wednesday|thursday|friday|saturday|sunday)'
+      r'(?:\s*/\s*'
+      r'(mon|tue|tues|wed|thu|thur|thurs|fri|sat|sun|'
+      r'monday|tuesday|wednesday|thursday|friday|saturday|sunday))+'
+      r'\b',
+      caseSensitive: false,
+    );
+    m = multiDayRe.firstMatch(text);
+    if (m != null) {
+      // Split the full match on '/' to extract all days
+      final full = m.group(0)!;
+      final parts = full.substring(6).split('/'); // skip "every "
+      final days = parts
+          .map((d) => _toShortDay(d.trim()))
+          .where((d) => d != null)
+          .cast<String>()
+          .toList();
+      if (days.isNotEmpty) {
+        set('weekly|1|${days.join(',')}');
+        return text.replaceFirst(m.group(0)!, '').trim();
+      }
+    }
+
+    // Single day: every monday
+    final singleDayRe = RegExp(
+      r'\bevery\s+'
+      r'(mon|tue|tues|wed|thu|thur|thurs|fri|sat|sun|'
+      r'monday|tuesday|wednesday|thursday|friday|saturday|sunday)'
+      r'\b',
+      caseSensitive: false,
+    );
+    m = singleDayRe.firstMatch(text);
+    if (m != null) {
+      final short = _toShortDay(m.group(1)!);
+      if (short != null) {
+        set('weekly|1|$short');
+        return text.replaceFirst(m.group(0)!, '').trim();
+      }
+    }
+
+    // Generic interval: every N days/weeks/months/years
+    final intervalRe = RegExp(
       r'\bevery\s+(?:(\d+)\s+)?(day|days|week|weeks|month|months|year|years)\b',
       caseSensitive: false,
-    ).firstMatch(text);
+    );
+    m = intervalRe.firstMatch(text);
     if (m == null) return text;
 
     final unit = m.group(2)!.toLowerCase();
@@ -135,6 +194,17 @@ class TaskParser {
 
     set('$freq|$interval');
     return text.replaceFirst(m.group(0)!, '').trim();
+  }
+
+  static String? _toShortDay(String name) {
+    const map = {
+      'mon': 'mon', 'tue': 'tue', 'tues': 'tue', 'wed': 'wed',
+      'thu': 'thu', 'thur': 'thu', 'thurs': 'thu', 'fri': 'fri',
+      'sat': 'sat', 'sun': 'sun',
+      'monday': 'mon', 'tuesday': 'tue', 'wednesday': 'wed',
+      'thursday': 'thu', 'friday': 'fri', 'saturday': 'sat', 'sunday': 'sun',
+    };
+    return map[name.toLowerCase()];
   }
 
   // ── Date / Time ─────────────────────────────────────────────────────

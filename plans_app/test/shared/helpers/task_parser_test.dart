@@ -695,6 +695,84 @@ void main() {
     });
   });
 
+  group('Weekday recurrence', () {
+    test('every weekday → weekly|1|weekdays', () {
+      final r = TaskParser.parse('standup every weekday', projects, now: now);
+      expect(r.recurrence, 'weekly|1|weekdays');
+      expect(r.dueDate, isNotNull);
+      expect(r.title, 'standup');
+    });
+
+    test('every weekdays (plural) → weekly|1|weekdays', () {
+      final r = TaskParser.parse('standup every weekdays', projects, now: now);
+      expect(r.recurrence, 'weekly|1|weekdays');
+    });
+
+    test('every mon/wed/fri → weekly|1|mon,wed,fri', () {
+      final r = TaskParser.parse('meeting every mon/wed/fri', projects, now: now);
+      expect(r.recurrence, 'weekly|1|mon,wed,fri');
+      expect(r.title, 'meeting');
+    });
+
+    test('every mon/wed (two days)', () {
+      final r = TaskParser.parse('call every mon/wed', projects, now: now);
+      expect(r.recurrence, 'weekly|1|mon,wed');
+    });
+
+    test('every monday (full name) → weekly|1|mon', () {
+      final r = TaskParser.parse('review every monday', projects, now: now);
+      expect(r.recurrence, 'weekly|1|mon');
+      expect(r.title, 'review');
+    });
+
+    test('every wed (short name) → weekly|1|wed', () {
+      final r = TaskParser.parse('deploy every wed', projects, now: now);
+      expect(r.recurrence, 'weekly|1|wed');
+    });
+
+    test('every tues → tue (canonical short form)', () {
+      final r = TaskParser.parse('sync every tues', projects, now: now);
+      expect(r.recurrence, 'weekly|1|tue');
+    });
+
+    test('every thurs → thu (canonical short form)', () {
+      final r = TaskParser.parse('sync every thurs', projects, now: now);
+      expect(r.recurrence, 'weekly|1|thu');
+    });
+
+    test('weekday without every → not parsed', () {
+      final r = TaskParser.parse('monday meeting', projects, now: now);
+      expect(r.recurrence, isNull);
+      // "monday" gets parsed as a keyword date, so title is just "meeting"
+    });
+
+    test('every weekday with explicit date → date wins', () {
+      final r = TaskParser.parse('standup every weekday tomorrow', projects, now: now);
+      expect(r.recurrence, 'weekly|1|weekdays');
+      expect(r.dueDate, isNotNull);
+      expect(r.dueDate!.day, now.day + 1);
+    });
+
+    test('every weekend → not a valid pattern, not parsed', () {
+      // "every weekend" is not supported, should fall through to interval parser
+      // "weekend" doesn't match day names, so nothing should match
+      final r = TaskParser.parse('relax every weekend', projects, now: now);
+      expect(r.recurrence, isNull);
+      expect(r.title, 'relax every weekend');
+    });
+
+    test('every weekday with p1 priority', () {
+      final r = TaskParser.parse('p1 standup every weekday', projects, now: now);
+      expect(r.priority, TaskPriority.high);
+      expect(r.recurrence, 'weekly|1|weekdays');
+    });
+
+    test('every weekday does not match everyday as one word', () {
+      final r = TaskParser.parse('my everyday routine', projects, now: now);
+      expect(r.recurrence, isNull);
+    });
+  });
+
   group('Edge cases', () {
     test('empty input returns title as-is', () {
       final r = TaskParser.parse('', projects, now: now);

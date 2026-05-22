@@ -158,5 +158,20 @@ void main() {
       final tokens = TaskHighlighter.scan('every single thing');
       expect(tokens, isEmpty);
     });
+
+    test('highlights every weekday', () {
+      final tokens = TaskHighlighter.scan('standup every weekday');
+      expect(tokens.any((t) => t.start == 8 && t.end == 21), true);
+    });
+
+    test('highlights every mon/wed/fri', () {
+      final tokens = TaskHighlighter.scan('meeting every mon/wed/fri');
+      expect(tokens.any((t) => t.start == 8 && t.end == 25), true);
+    });
+
+    test('highlights every monday', () {
+      final tokens = TaskHighlighter.scan('review every monday');
+      expect(tokens.any((t) => t.start == 7 && t.end == 19), true);
+    });
   });
 }

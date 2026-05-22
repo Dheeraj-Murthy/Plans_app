@@ -29,7 +29,7 @@ class TaskListScreen extends ConsumerWidget {
         ref.watch(projectsProvider).where((p) => p.id == projectId).firstOrNull?.name ?? 'Tasks',
     };
 
-    final isDesktop = !kIsWeb && Platform.isMacOS;
+    final isDesktop = !kIsWeb && (Platform.isMacOS || Platform.isLinux || Platform.isWindows);
     final isTimeline = selection is ViewSelection && selection.view == ViewType.timeline;
 
     return Column(

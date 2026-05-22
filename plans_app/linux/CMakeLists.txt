@@ -75,6 +75,17 @@ set_target_properties(${BINARY_NAME}
 include(flutter/generated_plugins.cmake)
 
 
+# === Rust native library (plans_core) ===
+set(RUST_LIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../rust/target/release")
+set(RUST_LIB "${RUST_LIB_DIR}/libplans_core.so")
+if(EXISTS ${RUST_LIB})
+  list(APPEND PLUGIN_BUNDLED_LIBRARIES ${RUST_LIB})
+  message(STATUS "Plans Rust library: ${RUST_LIB}")
+else()
+  message(WARNING "Plans Rust library NOT found at ${RUST_LIB}. Run 'bash rust/build_linux.sh' first.")
+endif()
+
+
 # === Installation ===
 # By default, "installing" just makes a relocatable bundle in the build
 # directory.

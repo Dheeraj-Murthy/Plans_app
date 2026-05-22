@@ -11,6 +11,7 @@ import 'theme/app_theme.dart';
 import 'routing/app_router.dart';
 import 'shared/database/database_service.dart';
 import 'shared/notifications/notification_service.dart';
+import 'package:home_widget/home_widget.dart';
 
 final widgetIntentProvider = Provider<Map<String, String>?>((ref) => null);
 
@@ -22,6 +23,16 @@ void main() async {
       externalLibrary: ExternalLibrary.open(
         '@rpath/plans_core.framework/plans_core',
       ),
+    );
+  } else if (!kIsWeb && Platform.isLinux) {
+    await _initRustLib(
+      devPath: 'rust/target/release/libplans_core.so',
+      soname: 'libplans_core.so',
+    );
+  } else if (!kIsWeb && Platform.isWindows) {
+    await _initRustLib(
+      devPath: 'rust/target/release/plans_core.dll',
+      soname: 'plans_core.dll',
     );
   } else if (!kIsWeb) {
     await RustLib.init();
@@ -42,6 +53,12 @@ void main() async {
   await rust_api.initDatabase(path: '${dir.path}/plans.db');
   await NotificationService.init();
 
+  if (!kIsWeb && (Platform.isIOS || Platform.isMacOS)) {
+    try {
+      await HomeWidget.setAppGroupId('group.com.plansapp');
+    } catch (_) {}
+  }
+
   final db = DatabaseService();
 
   runApp(
@@ -53,6 +70,18 @@ void main() async {
       child: PlansApp(),
     ),
   );
+}
+
+/// Try dev path (flutter run) first, fall back to soname (release bundle).
+Future<void> _initRustLib({required String devPath, required String soname}) async {
+  final tryPaths = [devPath, soname];
+  for (final p in tryPaths) {
+    try {
+      await RustLib.init(externalLibrary: ExternalLibrary.open(p));
+      return;
+    } catch (_) {}
+  }
+  await RustLib.init();
 }
 
 class PlansApp extends ConsumerWidget {

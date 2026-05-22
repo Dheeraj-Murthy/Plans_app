@@ -20,6 +20,7 @@ class WidgetBridge {
       await HomeWidget.updateWidget(
         androidName: _widgetName,
         qualifiedAndroidName: 'com.plansapp.widget.$_widgetName',
+        iOSName: 'PlansWidget',
       );
     } catch (_) {}
   }

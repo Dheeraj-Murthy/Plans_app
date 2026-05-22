@@ -40,6 +40,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<String> dco_decode_list_String(dynamic raw);
 
   @protected
+  List<int> dco_decode_list_prim_u_8_loose(dynamic raw);
+
+  @protected
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw);
 
   @protected
@@ -56,6 +59,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   Project dco_decode_project(dynamic raw);
+
+  @protected
+  SyncSnapshotResult dco_decode_sync_snapshot_result(dynamic raw);
 
   @protected
   Task dco_decode_task(dynamic raw);
@@ -82,6 +88,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<String> sse_decode_list_String(SseDeserializer deserializer);
 
   @protected
+  List<int> sse_decode_list_prim_u_8_loose(SseDeserializer deserializer);
+
+  @protected
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer);
 
   @protected
@@ -98,6 +107,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   Project sse_decode_project(SseDeserializer deserializer);
+
+  @protected
+  SyncSnapshotResult sse_decode_sync_snapshot_result(
+    SseDeserializer deserializer,
+  );
 
   @protected
   Task sse_decode_task(SseDeserializer deserializer);
@@ -130,6 +144,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_list_String(List<String> self, SseSerializer serializer);
 
   @protected
+  void sse_encode_list_prim_u_8_loose(List<int> self, SseSerializer serializer);
+
+  @protected
   void sse_encode_list_prim_u_8_strict(
     Uint8List self,
     SseSerializer serializer,
@@ -152,6 +169,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_project(Project self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_sync_snapshot_result(
+    SyncSnapshotResult self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_task(Task self, SseSerializer serializer);
