@@ -33,6 +33,7 @@ jobs:
 
       - name: Ensure debug keystore
         run: |
+          mkdir -p ~/.android
           if [ ! -f ~/.android/debug.keystore ]; then
             keytool -genkey -v -keystore ~/.android/debug.keystore \
               -storepass android -alias androiddebugkey -keypass android \
