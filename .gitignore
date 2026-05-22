@@ -40,3 +40,6 @@ plans_app/linux/flutter/generated_plugin_registrant.*
 plans_app/linux/flutter/generated_plugins.cmake
 plans_app/windows/flutter/generated_plugin_registrant.*
 plans_app/windows/flutter/generated_plugins.cmake
+
+# Android Rust build artifacts (produced by build_android.sh)
+plans_app/android/app/src/main/jniLibs/
