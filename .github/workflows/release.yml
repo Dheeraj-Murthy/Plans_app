@@ -45,7 +45,7 @@ jobs:
         run: flutter pub get
 
       - name: Build Rust (Android)
-        run: bash rust/build_android.sh
+        run: cd rust && bash build_android.sh
 
       - name: Build App Bundle
         run: flutter build appbundle --release
