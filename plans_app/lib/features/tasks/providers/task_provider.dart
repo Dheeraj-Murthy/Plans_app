@@ -6,6 +6,7 @@ import '../../projects/providers/project_provider.dart';
 import '../../../shared/database/database_service.dart';
 import '../../../shared/helpers/recurrence.dart';
 import '../../../shared/notifications/notification_service.dart';
+import '../../../shared/sync/sync_service.dart';
 import '../../../shared/widgets/widget_bridge.dart';
 
 sealed class UndoAction {}
@@ -243,6 +244,7 @@ class TasksNotifier extends Notifier<List<Task>> {
       recurrence: recurrence,
     );
     state = [...state, task];
+    ref.read(syncServiceProvider.notifier).markDirty();
     NotificationService.scheduleForTask(task);
     _debouncedWidgetUpdate();
   }
@@ -260,6 +262,7 @@ class TasksNotifier extends Notifier<List<Task>> {
     state = newState;
 
     _db.updateTask(toggled);
+    ref.read(syncServiceProvider.notifier).markDirty();
     if (toggled.isCompleted) {
       NotificationService.cancelForTask(id);
     } else {
@@ -281,6 +284,7 @@ class TasksNotifier extends Notifier<List<Task>> {
             recurrence: task.recurrence,
           ).then((nextTask) {
             state = [...state, nextTask];
+            ref.read(syncServiceProvider.notifier).markDirty();
             NotificationService.scheduleForTask(nextTask);
           });
         }
@@ -304,6 +308,7 @@ class TasksNotifier extends Notifier<List<Task>> {
     final task = state.where((t) => t.id == id).firstOrNull;
     state = state.where((t) => t.id != id).toList();
     _db.deleteTask(id);
+    ref.read(syncServiceProvider.notifier).markDirty();
     NotificationService.cancelForTask(id);
     _debouncedWidgetUpdate();
     return task;
@@ -311,6 +316,7 @@ class TasksNotifier extends Notifier<List<Task>> {
 
   Future<void> restoreTask(Task task) async {
     await _db.restoreTask(task.id);
+    ref.read(syncServiceProvider.notifier).markDirty();
     state = [...state, task];
     NotificationService.scheduleForTask(task);
     _debouncedWidgetUpdate();
@@ -323,6 +329,7 @@ class TasksNotifier extends Notifier<List<Task>> {
     newState[idx] = updated;
     state = newState;
     _db.updateTask(updated);
+    ref.read(syncServiceProvider.notifier).markDirty();
     NotificationService.scheduleForTask(updated);
     _debouncedWidgetUpdate();
   }
@@ -333,6 +340,7 @@ class TasksNotifier extends Notifier<List<Task>> {
     tasks.insert(newIndex, moved);
     state = tasks;
     _db.reorderTasks(tasks.map((t) => t.id).toList());
+    ref.read(syncServiceProvider.notifier).markDirty();
     _debouncedWidgetUpdate();
   }
 }
