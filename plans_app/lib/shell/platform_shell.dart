@@ -15,7 +15,9 @@ import '../shared/helpers/task_helpers.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_typography.dart';
+import 'package:go_router/go_router.dart';
 import '../main.dart' show widgetIntentProvider;
+import '../shared/sync/sync_indicator.dart';
 
 class PlatformAdaptiveShell extends ConsumerStatefulWidget {
   const PlatformAdaptiveShell({super.key});
@@ -181,15 +183,27 @@ class _PlatformAdaptiveShellState
   }
 }
 
-class _DesktopShell extends StatelessWidget {
+class _DesktopShell extends ConsumerWidget {
   @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Scaffold(
       backgroundColor: AppColors.background,
-      body: Row(
+      body: Stack(
         children: [
-          SlimSidebar(),
-          Expanded(child: TaskListScreen()),
+          const Row(
+            children: [
+              SlimSidebar(),
+              Expanded(child: TaskListScreen()),
+            ],
+          ),
+          Positioned(
+            right: 12,
+            bottom: 12,
+            child: GestureDetector(
+              onTap: () => context.push('/sync'),
+              child: const SyncIndicator(),
+            ),
+          ),
         ],
       ),
     );
@@ -237,24 +251,13 @@ class _MobileShell extends ConsumerWidget {
           ),
         ),
         actions: [
-          // // TODO: remove test button
-          // IconButton(
-          //   icon: const Icon(Icons.notifications_active_outlined,
-          //       color: AppColors.accent),
-          //   tooltip: 'Test notification',
-          //   onPressed: () => NotificationService.showTestNotification(),
-          // ),
-          // if (completed.isNotEmpty)
-          //   TextButton(
-          //     onPressed: () =>
-          //         ref.read(tasksProvider.notifier).clearCompleted(),
-          //     child: Text(
-          //       'Clear',
-          //       style: AppTypography.bodySmall.copyWith(
-          //         color: AppColors.textMuted,
-          //       ),
-          //     ),
-          //   ),
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: GestureDetector(
+              onTap: () => context.push('/sync'),
+              child: const SyncIndicator(),
+            ),
+          ),
         ],
       ),
       drawer: _MobileDrawer(),
