@@ -1,7 +1,7 @@
 use rusqlite::Connection;
 use std::sync::{LazyLock, Mutex};
 
-static DB: LazyLock<Mutex<Option<Connection>>> = LazyLock::new(|| Mutex::new(None));
+pub(crate) static DB: LazyLock<Mutex<Option<Connection>>> = LazyLock::new(|| Mutex::new(None));
 
 pub fn init_db(path: &str) -> Result<(), String> {
     let conn = Connection::open(path).map_err(|e| e.to_string())?;
@@ -52,6 +52,20 @@ fn run_migrations(conn: &Connection) -> Result<(), String> {
         .ok();
     conn.execute_batch("ALTER TABLE tasks ADD COLUMN recurrence TEXT;")
         .ok();
+    conn.execute_batch(
+        "CREATE TABLE IF NOT EXISTS sync_state (
+            id INTEGER PRIMARY KEY CHECK (id = 1),
+            snapshot_version INTEGER NOT NULL DEFAULT 0,
+            last_synced_at TEXT,
+            last_remote_checksum TEXT,
+            device_id TEXT NOT NULL DEFAULT '',
+            last_uploaded_version INTEGER DEFAULT 0
+        );"
+    ).ok();
+    conn.execute_batch(
+        "INSERT OR IGNORE INTO sync_state (id, snapshot_version) VALUES (1, 0);"
+    ).ok();
+
 
     let count: i64 = conn
         .query_row("SELECT COUNT(*) FROM projects WHERE is_deleted = 0", [], |r| {

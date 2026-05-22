@@ -5,6 +5,7 @@
 
 import 'api.dart';
 import 'api/projects.dart';
+import 'api/sync.dart';
 import 'api/tasks.dart';
 import 'dart:async';
 import 'dart:convert';

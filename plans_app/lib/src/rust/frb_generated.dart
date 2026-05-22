@@ -5,6 +5,7 @@
 
 import 'api.dart';
 import 'api/projects.dart';
+import 'api/sync.dart';
 import 'api/tasks.dart';
 import 'dart:async';
 import 'dart:convert';
@@ -67,7 +68,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.12.0';
 
   @override
-  int get rustContentHash => 2134817197;
+  int get rustContentHash => -2021816520;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -104,11 +105,17 @@ abstract class RustLibApi extends BaseApi {
 
   Future<List<Task>> crateApiTasksGetAllTasks();
 
+  Future<String> crateApiSyncGetOrCreateDeviceId();
+
+  Future<String> crateApiSyncGetSyncState();
+
   Future<void> crateApiInitDatabase({required String path});
 
   Future<void> crateApiTasksReorderTasks({required List<String> taskIds});
 
   Future<void> crateApiTasksRestoreTask({required String id});
+
+  Future<void> crateApiSyncSetSyncState({required String json});
 
   Future<Project> crateApiProjectsUpdateProject({
     required String id,
@@ -360,6 +367,60 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "get_all_tasks", argNames: []);
 
   @override
+  Future<String> crateApiSyncGetOrCreateDeviceId() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 8,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiSyncGetOrCreateDeviceIdConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSyncGetOrCreateDeviceIdConstMeta =>
+      const TaskConstMeta(debugName: "get_or_create_device_id", argNames: []);
+
+  @override
+  Future<String> crateApiSyncGetSyncState() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 9,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiSyncGetSyncStateConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSyncGetSyncStateConstMeta =>
+      const TaskConstMeta(debugName: "get_sync_state", argNames: []);
+
+  @override
   Future<void> crateApiInitDatabase({required String path}) {
     return handler.executeNormal(
       NormalTask(
@@ -369,7 +430,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 8,
+            funcId: 10,
             port: port_,
           );
         },
@@ -397,7 +458,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 9,
+            funcId: 11,
             port: port_,
           );
         },
@@ -425,7 +486,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 10,
+            funcId: 12,
             port: port_,
           );
         },
@@ -444,6 +505,34 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "restore_task", argNames: ["id"]);
 
   @override
+  Future<void> crateApiSyncSetSyncState({required String json}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(json, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 13,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiSyncSetSyncStateConstMeta,
+        argValues: [json],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSyncSetSyncStateConstMeta =>
+      const TaskConstMeta(debugName: "set_sync_state", argNames: ["json"]);
+
+  @override
   Future<Project> crateApiProjectsUpdateProject({
     required String id,
     required String name,
@@ -459,7 +548,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 11,
+            funcId: 14,
             port: port_,
           );
         },
@@ -490,7 +579,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 12,
+            funcId: 15,
             port: port_,
           );
         },

@@ -1,5 +1,6 @@
 pub mod projects;
 pub mod tasks;
+pub mod sync;
 
 use crate::db;
 
