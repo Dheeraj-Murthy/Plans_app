@@ -43,9 +43,13 @@ class SyncService extends Notifier<SyncStatus> {
   }
 
   Future<void> _init() async {
-    if (await _driveApi.trySilentAuth()) {
-      state = SyncStatus.idle;
-      checkForUpdates();
+    try {
+      if (await _driveApi.trySilentAuth()) {
+        state = SyncStatus.idle;
+        checkForUpdates();
+      }
+    } catch (_) {
+      // Silently handle - tests or non-Flutter environments without binding
     }
   }
 

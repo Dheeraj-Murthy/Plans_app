@@ -34,8 +34,12 @@ class GoogleDriveApi {
   }
 
   Future<bool> trySilentAuth() async {
-    final authed = await _secureStorage.read(key: 'sync_authed');
-    if (authed != 'true') return false;
+    try {
+      final val = await _secureStorage.read(key: 'sync_authed');
+      if (val != 'true') return false;
+    } catch (_) {
+      return false;
+    }
     try {
       _account = await _signIn.signInSilently();
       return _account != null;
