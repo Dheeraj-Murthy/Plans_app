@@ -1,0 +1,198 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  FLUTTER_VERSION: '3.31'
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: plans_app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Install cargo-ndk
+        run: cargo install cargo-ndk
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Ensure debug keystore
+        run: |
+          if [ ! -f ~/.android/debug.keystore ]; then
+            keytool -genkey -v -keystore ~/.android/debug.keystore \
+              -storepass android -alias androiddebugkey -keypass android \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -dname "CN=Android Debug,O=Android,C=US"
+          fi
+
+      - name: Flutter pub get
+        run: flutter pub get
+
+      - name: Build Rust (Android)
+        run: bash rust/build_android.sh
+
+      - name: Build App Bundle
+        run: flutter build appbundle --release
+
+      - name: Build APK
+        run: flutter build apk --release
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android
+          path: |
+            plans_app/build/app/outputs/bundle/release/app-release.aab
+            plans_app/build/app/outputs/apk/release/app-release.apk
+
+  macos:
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: plans_app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Flutter pub get
+        run: flutter pub get
+
+      - name: Build Rust (macOS)
+        run: bash rust/build_macos.sh
+
+      - name: Build macOS app
+        run: flutter build macos --release
+
+      - name: Package .app
+        run: |
+          cd build/macos/Build/Products/Release
+          ditto -c -k --sequestRsa --keepParent Plans.app Plans.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos
+          path: plans_app/build/macos/Build/Products/Release/Plans.zip
+
+  linux:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: plans_app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Install system deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake ninja-build libgtk-3-dev liblzma-dev pkg-config
+
+      - name: Flutter pub get
+        run: flutter pub get
+
+      - name: Build Rust (Linux)
+        run: cargo build --release --manifest-path rust/Cargo.toml
+
+      - name: Build Linux app
+        run: flutter build linux --release
+
+      - name: Copy Rust lib into bundle
+        run: |
+          cp rust/target/release/libplans_core.so build/linux/x64/release/bundle/lib/
+
+      - name: Package bundle
+        run: |
+          cd build/linux/x64/release
+          tar czf plans-linux.tar.gz bundle
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          path: plans_app/build/linux/x64/release/plans-linux.tar.gz
+
+  windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: plans_app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Flutter pub get
+        run: flutter pub get
+
+      - name: Build Rust (Windows)
+        run: cargo build --release --manifest-path rust/Cargo.toml
+
+      - name: Build Windows app
+        run: flutter build windows --release
+
+      - name: Copy Rust dll into bundle
+        shell: pwsh
+        run: |
+          Copy-Item rust\target\release\plans_core.dll build\windows\x64\runner\Release\
+
+      - name: Package bundle
+        shell: pwsh
+        run: |
+          Compress-Archive -Path build\windows\x64\runner\Release -DestinationPath build\windows\x64\runner\plans-windows.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: plans_app\build\windows\x64\runner\plans-windows.zip
+
+  release:
+    needs: [android, macos, linux, windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            app-release.aab
+            app-release.apk
+            Plans.zip
+            plans-linux.tar.gz
+            plans-windows.zip
+          generate_release_notes: true
