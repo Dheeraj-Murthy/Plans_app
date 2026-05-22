@@ -5,6 +5,9 @@ on:
     tags:
       - 'v*'
 
+permissions:
+  contents: write
+
 jobs:
   android:
     runs-on: ubuntu-latest
@@ -59,12 +62,16 @@ jobs:
       - name: Build APK
         run: flutter build apk --release
 
+      - name: Stage artifacts
+        run: |
+          mkdir -p dist
+          cp build/app/outputs/bundle/release/app-release.aab dist/
+          cp build/app/outputs/apk/release/app-release.apk dist/
+
       - uses: actions/upload-artifact@v4
         with:
           name: android
-          path: |
-            plans_app/build/app/outputs/bundle/release/app-release.aab
-            plans_app/build/app/outputs/apk/release/app-release.apk
+          path: plans_app/dist/
 
   macos:
     runs-on: macos-latest
@@ -94,10 +101,15 @@ jobs:
           cd build/macos/Build/Products/Release
           ditto -c -k --keepParent Plans.app Plans.zip
 
+      - name: Stage artifacts
+        run: |
+          mkdir -p dist
+          cp build/macos/Build/Products/Release/Plans.zip dist/
+
       - uses: actions/upload-artifact@v4
         with:
           name: macos
-          path: plans_app/build/macos/Build/Products/Release/Plans.zip
+          path: plans_app/dist/
 
   linux:
     runs-on: ubuntu-latest
@@ -136,10 +148,15 @@ jobs:
           cd build/linux/x64/release
           tar czf plans-linux.tar.gz bundle
 
+      - name: Stage artifacts
+        run: |
+          mkdir -p dist
+          cp build/linux/x64/release/plans-linux.tar.gz dist/
+
       - uses: actions/upload-artifact@v4
         with:
           name: linux
-          path: plans_app/build/linux/x64/release/plans-linux.tar.gz
+          path: plans_app/dist/
 
   windows:
     runs-on: windows-latest
@@ -174,10 +191,16 @@ jobs:
         run: |
           Compress-Archive -Path build\windows\x64\runner\Release -DestinationPath build\windows\x64\runner\plans-windows.zip
 
+      - name: Stage artifacts
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path dist -Force
+          Copy-Item build\windows\x64\runner\plans-windows.zip dist\
+
       - uses: actions/upload-artifact@v4
         with:
           name: windows
-          path: plans_app\build\windows\x64\runner\plans-windows.zip
+          path: plans_app\dist\
 
   release:
     needs: [android, macos, linux, windows]
