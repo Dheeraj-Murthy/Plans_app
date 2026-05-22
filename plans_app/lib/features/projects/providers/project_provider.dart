@@ -36,7 +36,7 @@ final sidebarSelectionProvider =
 );
 
 class ProjectsNotifier extends Notifier<List<Project>> {
-  late final DatabaseService _db;
+  late DatabaseService _db;
 
   @override
   List<Project> build() {

@@ -197,7 +197,7 @@ final filteredTasksProvider = Provider<List<Task>>((ref) {
 });
 
 class TasksNotifier extends Notifier<List<Task>> {
-  late final DatabaseService _db;
+  late DatabaseService _db;
   Timer? _widgetUpdateTimer;
 
   @override

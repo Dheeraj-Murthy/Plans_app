@@ -188,22 +188,10 @@ class _DesktopShell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: Stack(
+      body: const Row(
         children: [
-          const Row(
-            children: [
-              SlimSidebar(),
-              Expanded(child: TaskListScreen()),
-            ],
-          ),
-          Positioned(
-            right: 12,
-            bottom: 12,
-            child: GestureDetector(
-              onTap: () => context.push('/sync'),
-              child: const SyncIndicator(),
-            ),
-          ),
+          SlimSidebar(),
+          Expanded(child: TaskListScreen()),
         ],
       ),
     );

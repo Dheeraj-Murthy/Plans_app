@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../providers/project_provider.dart';
 import '../../../theme/app_spacing.dart';
 import '../../../theme/app_theme.dart';
@@ -8,6 +9,7 @@ import '../../../shared/widgets/sidebar/sidebar_item.dart';
 import '../../../shared/widgets/sidebar/sidebar_section_header.dart';
 import '../../../shared/widgets/sidebar/sidebar_search.dart';
 import '../../../shared/widgets/sidebar/add_project_button.dart';
+import '../../../shared/sync/sync_indicator.dart';
 import '../../tasks/providers/task_provider.dart';
 import '../../../shared/helpers/task_helpers.dart';
 
@@ -101,6 +103,31 @@ class SlimSidebar extends ConsumerWidget {
 
           // Add project button
           const AddProjectButton(),
+
+          // Sync
+          const Divider(height: 1, color: AppColors.border),
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.sidebarPadding,
+              vertical: AppSpacing.sm,
+            ),
+            child: GestureDetector(
+              onTap: () => context.push('/sync'),
+              child: const Row(
+                children: [
+                  SyncIndicator(),
+                  SizedBox(width: AppSpacing.sm),
+                  Text(
+                    'Sync',
+                    style: TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );
