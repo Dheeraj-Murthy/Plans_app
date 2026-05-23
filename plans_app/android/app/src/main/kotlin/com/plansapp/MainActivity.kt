@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.os.Build
 import android.os.Bundle
+import androidx.core.content.ContextCompat
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -22,15 +23,12 @@ class MainActivity : FlutterActivity() {
 
     override fun onResume() {
         super.onResume()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(
-                widgetToggleReceiver,
-                IntentFilter(TASK_TOGGLED_ACTION),
-                BroadcastReceiver.RECEIVER_NOT_EXPORTED,
-            )
-        } else {
-            registerReceiver(widgetToggleReceiver, IntentFilter(TASK_TOGGLED_ACTION))
-        }
+        ContextCompat.registerReceiver(
+            this,
+            widgetToggleReceiver,
+            IntentFilter(TASK_TOGGLED_ACTION),
+            ContextCompat.RECEIVER_NOT_EXPORTED,
+        )
     }
 
     override fun onPause() {
