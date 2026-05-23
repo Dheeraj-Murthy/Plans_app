@@ -73,6 +73,15 @@ pub fn create_snapshot(
     schema_version: i64,
     app_version: &str,
 ) -> Result<SnapshotResult, String> {
+    // 0. Increment snapshot_version atomically before backup
+    //    so the DB state matches the manifest version.
+    let mut state = get_sync_state()?;
+    let new_version = state.snapshot_version + 1;
+    state.snapshot_version = new_version;
+    state.last_synced_at = Some(chrono::Utc::now().to_rfc3339());
+    state.last_uploaded_version = new_version;
+    set_sync_state(&state)?;
+
     // 1. Backup API -> temp file (consistent snapshot with minimal locking)
     let backup_path = format!("{}.sync_backup", db_path);
     db::with_db(|src| {
@@ -112,15 +121,7 @@ pub fn create_snapshot(
     encrypted.extend_from_slice(&nonce_bytes);
     encrypted.extend_from_slice(&ciphertext);
 
-    // 7. Increment snapshot_version atomically
-    let mut state = get_sync_state()?;
-    let new_version = state.snapshot_version + 1;
-    state.snapshot_version = new_version;
-    state.last_synced_at = Some(chrono::Utc::now().to_rfc3339());
-    state.last_uploaded_version = new_version;
-    set_sync_state(&state)?;
-
-    // 8. Build manifest JSON
+    // 7. Build manifest JSON
     use chrono::Utc;
     let manifest = serde_json::json!({
         "snapshot_version": new_version,
@@ -196,6 +197,22 @@ pub fn install_snapshot(
     if !integrity.to_lowercase().contains("ok") {
         std::fs::remove_file(&temp).ok();
         return Err(format!("integrity check failed: {}", integrity));
+    }
+
+    // 6b. Verify snapshot version matches manifest version
+    let db_ver: i64 = verify
+        .query_row(
+            "SELECT snapshot_version FROM sync_state WHERE id=1",
+            [],
+            |r| r.get(0),
+        )
+        .map_err(|e| e.to_string())?;
+    if db_ver != remote_ver {
+        std::fs::remove_file(&temp).ok();
+        return Err(format!(
+            "version mismatch: snapshot has v{}, manifest says v{}",
+            db_ver, remote_ver
+        ));
     }
     drop(verify);
 

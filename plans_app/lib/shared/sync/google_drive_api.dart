@@ -95,21 +95,21 @@ class GoogleDriveApi {
   Future<void> uploadSnapshot(Uint8List encryptedBytes, Map<String, dynamic> manifest) async {
     final headers = await _authHeaders();
 
-    // Manifest JSON
-    final manifestFileId = await _findOrCreateFile('plans_manifest.json', headers);
-    final manifestUri = Uri.parse('https://www.googleapis.com/upload/drive/v3/files/$manifestFileId')
-        .replace(queryParameters: {'uploadType': 'media'});
-    await http.patch(manifestUri, headers: {
-      ...headers, 'Content-Type': 'application/json; charset=UTF-8',
-    }, body: jsonEncode(manifest));
-
-    // Encrypted snapshot
+    // Encrypted snapshot first (write data before commit pointer)
     final snapshotFileId = await _findOrCreateFile('plans_snapshot.enc', headers);
     final snapshotUri = Uri.parse('https://www.googleapis.com/upload/drive/v3/files/$snapshotFileId')
         .replace(queryParameters: {'uploadType': 'media'});
     await http.patch(snapshotUri, headers: {
       ...headers, 'Content-Type': 'application/octet-stream',
     }, body: encryptedBytes);
+
+    // Manifest JSON last (atomic commit pointer)
+    final manifestFileId = await _findOrCreateFile('plans_manifest.json', headers);
+    final manifestUri = Uri.parse('https://www.googleapis.com/upload/drive/v3/files/$manifestFileId')
+        .replace(queryParameters: {'uploadType': 'media'});
+    await http.patch(manifestUri, headers: {
+      ...headers, 'Content-Type': 'application/json; charset=UTF-8',
+    }, body: jsonEncode(manifest));
   }
 
   Future<Uint8List> downloadSnapshot() async {
