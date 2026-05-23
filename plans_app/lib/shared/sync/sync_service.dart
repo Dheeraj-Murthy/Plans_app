@@ -58,7 +58,6 @@ class SyncService extends Notifier<SyncStatus> {
     try {
       await _driveApi.authenticate();
       state = SyncStatus.idle;
-      markDirty();
       _doSync();
     } catch (e) {
       state = SyncStatus.error;
@@ -90,8 +89,8 @@ class SyncService extends Notifier<SyncStatus> {
     _isSyncing = true;
     state = SyncStatus.syncing;
     try {
-      await _uploadIfNeeded();
       await _downloadIfNewer();
+      await _uploadIfNeeded();
       state = SyncStatus.idle;
     } catch (e) {
       state = SyncStatus.error;

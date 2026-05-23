@@ -19,6 +19,7 @@ import 'package:go_router/go_router.dart';
 import '../main.dart' show widgetIntentProvider;
 import '../shared/sync/sync_service.dart';
 import '../shared/sync/sync_indicator.dart';
+import '../shared/widgets/app_toast.dart';
 
 class PlatformAdaptiveShell extends ConsumerStatefulWidget {
   const PlatformAdaptiveShell({super.key});
@@ -180,25 +181,20 @@ class _PlatformAdaptiveShellState
         TaskDeleted() => 'Task deleted',
         TaskToggled() => 'Task completed',
       };
-      ScaffoldMessenger.of(context).clearSnackBars();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(label),
-          duration: const Duration(seconds: 4),
-          action: SnackBarAction(
-            label: 'Undo',
-            onPressed: () async {
-              final undo = ref.read(undoStackProvider.notifier).pop();
-              if (undo == null) return;
-              switch (undo) {
-                case TaskDeleted(:final task):
-                  await ref.read(tasksProvider.notifier).restoreTask(task);
-                case TaskToggled(:final id):
-                  ref.read(tasksProvider.notifier).toggleTask(id);
-              }
-            },
-          ),
-        ),
+      showAppToast(
+        context: context,
+        message: label,
+        actionLabel: 'Undo',
+        onAction: () async {
+          final undo = ref.read(undoStackProvider.notifier).pop();
+          if (undo == null) return;
+          switch (undo) {
+            case TaskDeleted(:final task):
+              await ref.read(tasksProvider.notifier).restoreTask(task);
+            case TaskToggled(:final id):
+              ref.read(tasksProvider.notifier).toggleTask(id);
+          }
+        },
       );
     });
 
