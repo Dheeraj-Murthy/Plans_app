@@ -6,6 +6,7 @@ import '../../projects/providers/project_provider.dart';
 import '../../../shared/database/database_service.dart';
 import '../../../shared/helpers/recurrence.dart';
 import '../../../shared/notifications/notification_service.dart';
+import '../../../shared/notifications/reminder_style.dart';
 import '../../../shared/sync/sync_service.dart';
 import '../../../shared/widgets/widget_bridge.dart';
 
@@ -225,7 +226,7 @@ class TasksNotifier extends Notifier<List<Task>> {
     });
   }
 
-  Future<void> addTask({
+  Future<Task> addTask({
     required String title,
     String? description,
     DateTime? dueDate,
@@ -245,8 +246,14 @@ class TasksNotifier extends Notifier<List<Task>> {
     );
     state = [...state, task];
     ref.read(syncServiceProvider.notifier).markDirty();
-    NotificationService.scheduleForTask(task);
+    NotificationService.scheduleForTask(
+      task,
+      style: task.priority == TaskPriority.high
+          ? ReminderStyle.fullScreenAlarm
+          : ReminderStyle.notification,
+    );
     _debouncedWidgetUpdate();
+    return task;
   }
 
   bool toggleTask(String id) {
@@ -266,7 +273,12 @@ class TasksNotifier extends Notifier<List<Task>> {
     if (toggled.isCompleted) {
       NotificationService.cancelForTask(id);
     } else {
-      NotificationService.scheduleForTask(toggled);
+      NotificationService.scheduleForTask(
+        toggled,
+        style: toggled.priority == TaskPriority.high
+            ? ReminderStyle.fullScreenAlarm
+            : ReminderStyle.notification,
+      );
     }
 
     if (!wasCompleted) {
@@ -285,7 +297,12 @@ class TasksNotifier extends Notifier<List<Task>> {
           ).then((nextTask) {
             state = [...state, nextTask];
             ref.read(syncServiceProvider.notifier).markDirty();
-            NotificationService.scheduleForTask(nextTask);
+            NotificationService.scheduleForTask(
+              nextTask,
+              style: nextTask.priority == TaskPriority.high
+                  ? ReminderStyle.fullScreenAlarm
+                  : ReminderStyle.notification,
+            );
           });
         }
       }
@@ -318,7 +335,12 @@ class TasksNotifier extends Notifier<List<Task>> {
     await _db.restoreTask(task.id);
     ref.read(syncServiceProvider.notifier).markDirty();
     state = [...state, task];
-    NotificationService.scheduleForTask(task);
+    NotificationService.scheduleForTask(
+      task,
+      style: task.priority == TaskPriority.high
+          ? ReminderStyle.fullScreenAlarm
+          : ReminderStyle.notification,
+    );
     _debouncedWidgetUpdate();
   }
 
@@ -330,7 +352,12 @@ class TasksNotifier extends Notifier<List<Task>> {
     state = newState;
     _db.updateTask(updated);
     ref.read(syncServiceProvider.notifier).markDirty();
-    NotificationService.scheduleForTask(updated);
+    NotificationService.scheduleForTask(
+      updated,
+      style: updated.priority == TaskPriority.high
+          ? ReminderStyle.fullScreenAlarm
+          : ReminderStyle.notification,
+    );
     _debouncedWidgetUpdate();
   }
 

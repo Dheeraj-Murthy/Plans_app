@@ -1,0 +1,1 @@
+enum ReminderStyle { notification, fullScreenAlarm }

@@ -14,6 +14,7 @@ import 'shared/notifications/notification_service.dart';
 import 'package:home_widget/home_widget.dart';
 
 final widgetIntentProvider = Provider<Map<String, String>?>((ref) => null);
+final navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -52,6 +53,7 @@ void main() async {
   final dir = await getApplicationDocumentsDirectory();
   await rust_api.initDatabase(path: '${dir.path}/plans.db');
   await NotificationService.init();
+  NotificationService.navigatorKey = navigatorKey;
 
   if (!kIsWeb && (Platform.isIOS || Platform.isMacOS)) {
     try {
@@ -89,7 +91,7 @@ class PlansApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final router = appRouter;
+    final router = createRouter(navigatorKey);
     return MaterialApp.router(
       title: 'Plans',
       theme: AppTheme.dark,

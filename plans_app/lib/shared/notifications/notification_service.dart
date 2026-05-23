@@ -1,16 +1,31 @@
 import 'dart:io' show Platform;
 import 'package:alarm/alarm.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import '../../features/tasks/models/task.dart';
+import 'alarm_full_screen_screen.dart';
+import 'reminder_style.dart';
+
+class _AlarmInfo {
+  final String taskId;
+  final String title;
+  final ReminderStyle style;
+  _AlarmInfo(this.taskId, this.title, this.style);
+}
 
 class NotificationService {
   // flutter_local_notifications used for macOS scheduling + Android permission
   static final _fln = FlutterLocalNotificationsPlugin();
   static bool _initialized = false;
+
+  static GlobalKey<NavigatorState>? navigatorKey;
+  static final Map<int, _AlarmInfo> _alarmInfos = {};
+  static int? _currentFullScreenAlarmId;
 
   static Future<void> init() async {
     if (kIsWeb || _initialized) return;
@@ -81,34 +96,30 @@ class NotificationService {
       _initialized = true;
     }
 
-    // When alarm fires: stop the service first (no user input needed — vibrate=false
-    // means nothing is looping), then show a dismissible _fln notification.
     Alarm.ringing.listen((alarmSet) async {
       for (final alarm in alarmSet.alarms) {
-        await Alarm.stop(alarm.id);
-        try {
-          await _fln.show(
-            id: alarm.id,
-            title: alarm.notificationSettings.title,
-            body: alarm.notificationSettings.body,
-            notificationDetails: const NotificationDetails(
-              android: AndroidNotificationDetails(
-                'plans_reminders',
-                'Task Reminders',
-                importance: Importance.high,
-                priority: Priority.high,
-                icon: '@drawable/ic_stat_notification',
-              ),
-              iOS: DarwinNotificationDetails(
-                presentAlert: true,
-                presentSound: false,
-                presentBadge: false,
+        if (_currentFullScreenAlarmId == alarm.id) {
+          debugPrint('NotificationService: already showing full-screen alarm id=${alarm.id} — skip');
+          continue;
+        }
+        final info = _alarmInfos[alarm.id];
+        if (info != null && info.style == ReminderStyle.fullScreenAlarm) {
+          if (navigatorKey?.currentContext == null) {
+            debugPrint('NotificationService: cannot show full-screen alarm — no navigator context');
+            continue;
+          }
+          _currentFullScreenAlarmId = alarm.id;
+          navigatorKey!.currentState!.push(
+            MaterialPageRoute(
+              builder: (_) => AlarmFullScreenScreen(
+                alarmId: alarm.id,
+                taskId: info.taskId,
+                taskTitle: info.title,
               ),
             ),
           );
-          debugPrint('NotificationService: shown id=${alarm.id} "${alarm.notificationSettings.title}"');
-        } catch (e, st) {
-          debugPrint('NotificationService: fln.show FAILED: $e\n$st');
+        } else {
+          debugPrint('NotificationService: notification looping id=${alarm.id} "${alarm.notificationSettings.title}"');
         }
       }
     });
@@ -130,7 +141,10 @@ class NotificationService {
 
   // ── Public API ───────────────────────────────────────────────────────────
 
-  static Future<void> scheduleForTask(Task task) async {
+  static Future<void> scheduleForTask(
+    Task task, {
+    ReminderStyle? style,
+  }) async {
     if (!_initialized) {
       debugPrint('NotificationService: skip — not initialized');
       return;
@@ -150,29 +164,41 @@ class NotificationService {
     final fireAt =
         dueTime.isAfter(now) ? dueTime : now.add(const Duration(seconds: 5));
 
+    final dueStyle = style ?? ReminderStyle.notification;
+    final dueId = _dueId(task.id);
+    _alarmInfos[dueId] = _AlarmInfo(task.id, task.title, dueStyle);
     await _scheduleNotification(
-      id: _dueId(task.id),
+      id: dueId,
       title: task.title,
       body: 'Due now',
       at: fireAt,
+      style: dueStyle,
     );
 
-    final rem = task.reminderMinutes;
-    if (rem != null && rem > 0) {
-      final reminderTime = dueTime.subtract(Duration(minutes: rem));
-      if (reminderTime.isAfter(now)) {
-        await _scheduleNotification(
-          id: _reminderId(task.id),
-          title: task.title,
-          body: 'Due in $rem ${rem == 1 ? "minute" : "minutes"}',
-          at: reminderTime,
-        );
+    if (dueStyle != ReminderStyle.fullScreenAlarm) {
+      final rem = task.reminderMinutes;
+      if (rem != null && rem > 0) {
+        final reminderTime = dueTime.subtract(Duration(minutes: rem));
+        if (reminderTime.isAfter(now)) {
+          final remId = _reminderId(task.id);
+          _alarmInfos[remId] = _AlarmInfo(task.id, task.title, ReminderStyle.notification);
+          await _scheduleNotification(
+            id: remId,
+            title: task.title,
+            body: 'Due in $rem ${rem == 1 ? "minute" : "minutes"}',
+            at: reminderTime,
+            style: ReminderStyle.notification,
+          );
+        }
       }
     }
   }
 
   static Future<void> cancelForTask(String taskId) async {
     if (!_initialized) return;
+    _currentFullScreenAlarmId = null;
+    _alarmInfos.remove(_dueId(taskId));
+    _alarmInfos.remove(_reminderId(taskId));
     if (Platform.isMacOS) {
       await _fln.cancel(id: _dueId(taskId));
       await _fln.cancel(id: _reminderId(taskId));
@@ -184,56 +210,40 @@ class NotificationService {
     }
   }
 
+  static Future<void> snooze({
+    required int alarmId,
+    required String taskId,
+    required String taskTitle,
+    required int minutes,
+  }) async {
+    if (!_initialized) return;
+    _currentFullScreenAlarmId = null;
+    final fireAt = DateTime.now().add(Duration(minutes: minutes));
+    _alarmInfos[alarmId] = _AlarmInfo(taskId, taskTitle, ReminderStyle.fullScreenAlarm);
+    await _scheduleNotification(
+      id: alarmId,
+      title: taskTitle,
+      body: 'Snoozed',
+      at: fireAt,
+      style: ReminderStyle.fullScreenAlarm,
+    );
+  }
+
   static Future<void> rescheduleAll(List<Task> tasks) async {
     if (!_initialized) return;
-    // Android/iOS: Alarm.init() restores scheduled alarms from SharedPreferences
     if (!Platform.isMacOS) return;
     for (final task in tasks) {
       if (!task.isCompleted && task.dueDate != null) {
-        await scheduleForTask(task);
+        await scheduleForTask(task, style: _styleForPriority(task.priority));
       }
     }
   }
 
-  // static Future<void> showTestNotification() async {
-  //   if (!_initialized) {
-  //     debugPrint('NotificationService: showTestNotification — not initialized');
-  //     return;
-  //   }
-  //   try {
-  //     await _fln.show(
-  //       id: 999998,
-  //       title: 'Plans — instant test',
-  //       body: 'show() works (no AlarmManager)',
-  //       notificationDetails: const NotificationDetails(
-  //         macOS: DarwinNotificationDetails(
-  //           presentAlert: true,
-  //           presentSound: true,
-  //         ),
-  //         android: AndroidNotificationDetails(
-  //           'plans_reminders',
-  //           'Task Reminders',
-  //           importance: Importance.high,
-  //           priority: Priority.high,
-  //           icon: '@drawable/ic_stat_notification',
-  //         ),
-  //       ),
-  //     );
-  //     debugPrint('NotificationService: instant test sent');
-  // 
-  //     final fireAt =
-  //         DateTime.now().add(const Duration(seconds: 10));
-  //     await _scheduleNotification(
-  //       id: 999999,
-  //       title: 'Plans — alarm test',
-  //       body: 'Alarm-based notification fired!',
-  //       at: fireAt,
-  //     );
-  //     debugPrint('NotificationService: alarm test scheduled for $fireAt');
-  //   } catch (e, st) {
-  //     debugPrint('NotificationService.showTestNotification failed: $e\n$st');
-  //   }
-  // }
+  static ReminderStyle _styleForPriority(TaskPriority priority) {
+    return priority == TaskPriority.high
+        ? ReminderStyle.fullScreenAlarm
+        : ReminderStyle.notification;
+  }
 
   // ── Internal ─────────────────────────────────────────────────────────────
 
@@ -242,11 +252,18 @@ class NotificationService {
     required String title,
     required String body,
     required DateTime at,
+    ReminderStyle style = ReminderStyle.notification,
   }) async {
     if (Platform.isMacOS) {
       await _scheduleMacOS(id: id, title: title, body: body, at: at);
     } else {
-      await _scheduleAlarm(id: id, title: title, body: body, at: at);
+      await _scheduleAlarm(
+        id: id,
+        title: title,
+        body: body,
+        at: at,
+        style: style,
+      );
     }
   }
 
@@ -286,6 +303,7 @@ class NotificationService {
     required String title,
     required String body,
     required DateTime at,
+    ReminderStyle style = ReminderStyle.notification,
   }) async {
     try {
       await Alarm.set(
@@ -293,12 +311,12 @@ class NotificationService {
           id: id,
           dateTime: at,
           assetAudioPath: null,
-          loopAudio: false,
-          vibrate: false,
+          loopAudio: true,
+          vibrate: true,
           warningNotificationOnKill: Platform.isIOS,
           androidFullScreenIntent: false,
           androidStopAlarmOnTermination: false,
-          volumeSettings: VolumeSettings.fixed(volume: 0.0),
+          volumeSettings: const VolumeSettings.fixed(volume: 1.0),
           notificationSettings: NotificationSettings(
             title: title,
             body: body,

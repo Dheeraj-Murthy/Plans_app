@@ -362,7 +362,7 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
     }
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     final raw = _titleController.text.trim();
     if (raw.isEmpty) return;
     final desc = _descriptionController.text.trim();
@@ -396,7 +396,7 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
         ),
       );
     } else {
-      notifier.addTask(
+      await notifier.addTask(
         title: effectiveTitle,
         description: desc.isNotEmpty ? desc : null,
         dueDate: effectiveDueDate,
@@ -407,6 +407,6 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
       );
     }
 
-    Navigator.of(context).pop();
+    if (mounted) Navigator.of(context).pop();
   }
 }
