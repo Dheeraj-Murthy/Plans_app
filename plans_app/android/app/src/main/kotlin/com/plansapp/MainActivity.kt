@@ -1,40 +1,17 @@
 package com.plansapp
 
-import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
-import android.os.Build
 import android.os.Bundle
-import androidx.core.content.ContextCompat
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import org.json.JSONArray
 
 class MainActivity : FlutterActivity() {
     private var latestIntent: Intent? = null
     private val DEEPLINK_CHANNEL = "plans/widget/deeplink"
     private var deeplinkChannel: MethodChannel? = null
-    private val widgetToggleReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context, intent: Intent) {
-            deeplinkChannel?.invokeMethod("taskToggled", null)
-        }
-    }
-
-    override fun onResume() {
-        super.onResume()
-        ContextCompat.registerReceiver(
-            this,
-            widgetToggleReceiver,
-            IntentFilter(TASK_TOGGLED_ACTION),
-            ContextCompat.RECEIVER_NOT_EXPORTED,
-        )
-    }
-
-    override fun onPause() {
-        super.onPause()
-        try { unregisterReceiver(widgetToggleReceiver) } catch (_: Exception) {}
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -80,18 +57,19 @@ class MainActivity : FlutterActivity() {
                 }
                 "checkPendingWidgetSync" -> {
                     val prefs = getSharedPreferences("HomeWidgetPreferences", Context.MODE_PRIVATE)
-                    val pending = prefs.getBoolean("pending_widget_sync", false)
-                    if (pending) {
-                        prefs.edit().putBoolean("pending_widget_sync", false).apply()
+                    val ids = mutableListOf<String>()
+                    val existing = prefs.getString("pending_toggle_ids", null)
+                    if (existing != null && existing != "[]") {
+                        val arr = JSONArray(existing)
+                        for (i in 0 until arr.length()) {
+                            ids.add(arr.getString(i))
+                        }
+                        prefs.edit().remove("pending_toggle_ids").apply()
                     }
-                    result.success(pending)
+                    result.success(ids)
                 }
                 else -> result.notImplemented()
             }
         }
-    }
-
-    companion object {
-        private const val TASK_TOGGLED_ACTION = "com.plansapp.action.TASK_TOGGLED"
     }
 }

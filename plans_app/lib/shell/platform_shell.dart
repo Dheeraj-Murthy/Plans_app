@@ -61,6 +61,7 @@ class _PlatformAdaptiveShellState
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       ref.read(syncServiceProvider.notifier).checkForUpdates();
+      _checkPendingWidgetSync();
     }
   }
 
@@ -72,9 +73,6 @@ class _PlatformAdaptiveShellState
       if (taskId != null && taskId.isNotEmpty) {
         _openTask(taskId);
       }
-    } else if (call.method == 'taskToggled') {
-      ref.read(syncServiceProvider.notifier).markDirty();
-      ref.invalidate(tasksProvider);
     }
   }
 
@@ -82,10 +80,12 @@ class _PlatformAdaptiveShellState
     if (kIsWeb || !Platform.isAndroid) return;
     try {
       const channel = MethodChannel('plans/widget/deeplink');
-      final pending = await channel.invokeMethod<bool>('checkPendingWidgetSync');
-      if (pending == true) {
+      final pendingIds = (await channel.invokeMethod<List<dynamic>>('checkPendingWidgetSync')) ?? [];
+      if (pendingIds.isNotEmpty) {
+        for (final id in pendingIds) {
+          ref.read(tasksProvider.notifier).toggleTask(id as String);
+        }
         ref.read(syncServiceProvider.notifier).markDirty();
-        ref.invalidate(tasksProvider);
         ref.invalidate(projectsProvider);
       }
     } catch (_) {}

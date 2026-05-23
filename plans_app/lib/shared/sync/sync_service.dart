@@ -67,7 +67,11 @@ class SyncService extends Notifier<SyncStatus> {
   }
 
   Future<void> signOut() async {
-    await _driveApi.signOut();
+    try {
+      await _driveApi.signOut();
+    } catch (_) {
+      // Ignore platform errors — reset local state regardless
+    }
     state = SyncStatus.disconnected;
     _dirty = false;
     _debounceTimer?.cancel();

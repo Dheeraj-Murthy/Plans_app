@@ -28,8 +28,12 @@ class GoogleDriveApi {
   }
 
   Future<void> signOut() async {
-    await _signIn.signOut();
-    await _secureStorage.delete(key: 'sync_authed');
+    try {
+      await _signIn.signOut();
+    } catch (_) {}
+    try {
+      await _secureStorage.delete(key: 'sync_authed');
+    } catch (_) {}
     _account = null;
   }
 
