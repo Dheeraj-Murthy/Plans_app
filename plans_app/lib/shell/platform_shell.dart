@@ -17,6 +17,7 @@ import '../theme/app_theme.dart';
 import '../theme/app_typography.dart';
 import 'package:go_router/go_router.dart';
 import '../main.dart' show widgetIntentProvider;
+import '../shared/sync/sync_service.dart';
 import '../shared/sync/sync_indicator.dart';
 
 class PlatformAdaptiveShell extends ConsumerStatefulWidget {
@@ -28,12 +29,14 @@ class PlatformAdaptiveShell extends ConsumerStatefulWidget {
 }
 
 class _PlatformAdaptiveShellState
-    extends ConsumerState<PlatformAdaptiveShell> {
+    extends ConsumerState<PlatformAdaptiveShell> with WidgetsBindingObserver {
   static const _deeplinkChannel = MethodChannel('plans/widget/deeplink');
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    ref.read(syncServiceProvider); // trigger lazy init (silent auth + check)
     if (!kIsWeb && (Platform.isMacOS || Platform.isLinux || Platform.isWindows)) {
       HardwareKeyboard.instance.addHandler(_handleKeyEvent);
     }
@@ -41,6 +44,7 @@ class _PlatformAdaptiveShellState
       _deeplinkChannel.setMethodCallHandler(_handleNativeCall);
     }
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkPendingWidgetSync();
       final intent = ref.read(widgetIntentProvider);
       if (intent?['action'] == 'add_task') {
         _openAddTask();
@@ -53,6 +57,13 @@ class _PlatformAdaptiveShellState
     });
   }
 
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      ref.read(syncServiceProvider.notifier).checkForUpdates();
+    }
+  }
+
   Future<dynamic> _handleNativeCall(MethodCall call) async {
     if (call.method == 'openAddTask') {
       _openAddTask();
@@ -61,7 +72,23 @@ class _PlatformAdaptiveShellState
       if (taskId != null && taskId.isNotEmpty) {
         _openTask(taskId);
       }
+    } else if (call.method == 'taskToggled') {
+      ref.read(syncServiceProvider.notifier).markDirty();
+      ref.invalidate(tasksProvider);
     }
+  }
+
+  Future<void> _checkPendingWidgetSync() async {
+    if (kIsWeb || !Platform.isAndroid) return;
+    try {
+      const channel = MethodChannel('plans/widget/deeplink');
+      final pending = await channel.invokeMethod<bool>('checkPendingWidgetSync');
+      if (pending == true) {
+        ref.read(syncServiceProvider.notifier).markDirty();
+        ref.invalidate(tasksProvider);
+        ref.invalidate(projectsProvider);
+      }
+    } catch (_) {}
   }
 
   void _openAddTask() {

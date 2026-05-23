@@ -515,6 +515,18 @@ class PlansAppWidgetProvider : HomeWidgetProvider() {
             WidgetDbHelper.getInstance(context).toggleTask(taskId)
 
             try {
+                context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                    .edit().putBoolean("pending_widget_sync", true).apply()
+            } catch (_: Exception) {}
+
+            try {
+                val notifyIntent = Intent("com.plansapp.action.TASK_TOGGLED").apply {
+                    setPackage(context.packageName)
+                }
+                context.sendBroadcast(notifyIntent)
+            } catch (_: Exception) {}
+
+            try {
                 val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
                 val appWidgetManager = AppWidgetManager.getInstance(context)
                 val views = buildWidgetViews(context, prefs, appWidgetId)

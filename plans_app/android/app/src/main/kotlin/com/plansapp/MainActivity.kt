@@ -1,6 +1,10 @@
 package com.plansapp
 
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
+import android.os.Build
 import android.os.Bundle
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -10,6 +14,29 @@ class MainActivity : FlutterActivity() {
     private var latestIntent: Intent? = null
     private val DEEPLINK_CHANNEL = "plans/widget/deeplink"
     private var deeplinkChannel: MethodChannel? = null
+    private val widgetToggleReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            deeplinkChannel?.invokeMethod("taskToggled", null)
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(
+                widgetToggleReceiver,
+                IntentFilter(TASK_TOGGLED_ACTION),
+                BroadcastReceiver.RECEIVER_NOT_EXPORTED,
+            )
+        } else {
+            registerReceiver(widgetToggleReceiver, IntentFilter(TASK_TOGGLED_ACTION))
+        }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        try { unregisterReceiver(widgetToggleReceiver) } catch (_: Exception) {}
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -53,8 +80,20 @@ class MainActivity : FlutterActivity() {
                         result.success(mapOf("action" to ""))
                     }
                 }
+                "checkPendingWidgetSync" -> {
+                    val prefs = getSharedPreferences("HomeWidgetPreferences", Context.MODE_PRIVATE)
+                    val pending = prefs.getBoolean("pending_widget_sync", false)
+                    if (pending) {
+                        prefs.edit().putBoolean("pending_widget_sync", false).apply()
+                    }
+                    result.success(pending)
+                }
                 else -> result.notImplemented()
             }
         }
+    }
+
+    companion object {
+        private const val TASK_TOGGLED_ACTION = "com.plansapp.action.TASK_TOGGLED"
     }
 }
